@@ -1,5 +1,5 @@
-# void-install-script
-TUI Shell script installer for Void Linux
+# hourglassOS-install-script
+TUI Shell script installer for hourglassOS, a void linux based system tailored for web 3.0
 
 This installer was primarily created to serve as an installer with encryption support while also having general installation options one would want, with sane defaults.
 
