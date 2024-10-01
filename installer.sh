@@ -208,11 +208,31 @@ fi
 
 installOptions() {
 
-    if drawDialog --title "Encryption" --yesno "Should this installation be encrypted?" 0 0 ; then
+    # if drawDialog --title "Encryption" --yesno "Should this installation be encrypted?" 0 0 ; then
+    #     encryptionPrompt="Yes"
+    #     if drawDialog --title "Wipe Disk" --yesno "Would you like to securely wipe the selected disk before setup?\n\nThis can take quite a long time depending on how many passes you choose." 0 0 ; then
+    #         wipePrompt="Yes"
+    #         passInput=$(drawDialog --title "Wipe Disk" --inputbox "How many passes would you like to do on this disk?\n\nSane values include 1-3. The more passes you choose, the longer this will take." 0 0)
+    #     else
+    #         wipePrompt="No"
+    #         passInput=0
+    #     fi
+    # else
+    #     encryptionPrompt="No"
+    # fi
+
+    # if [ -z "$basesystem" ]; then
+    #     baseChoice=$(drawDialog --no-cancel --title "Base system meta package choice" --menu "If you are unsure, choose 'base-system'" 0 0 0 "base-system" "- Traditional base system package" "base-container" "- Minimal base system package targeted at containers and chroots")
+    # else
+    #     baseChoice="Custom"
+    # fi
+
+
+    if drawDialog --title "加密" --yesno "是否对本次安装进行加密？" 0 0 ; then
         encryptionPrompt="Yes"
-        if drawDialog --title "Wipe Disk" --yesno "Would you like to securely wipe the selected disk before setup?\n\nThis can take quite a long time depending on how many passes you choose." 0 0 ; then
+        if drawDialog --title "擦除磁盘" --yesno "您是否希望在设置前安全擦除所选磁盘？\n\n根据您选择的擦除次数，这个过程可能会非常耗时。" 0 0 ; then
             wipePrompt="Yes"
-            passInput=$(drawDialog --title "Wipe Disk" --inputbox "How many passes would you like to do on this disk?\n\nSane values include 1-3. The more passes you choose, the longer this will take." 0 0)
+            passInput=$(drawDialog --title "擦除磁盘" --inputbox "您希望对该磁盘进行几次擦除？\n\n合理的次数包括1-3次。次数越多，耗时越长。" 0 0)
         else
             wipePrompt="No"
             passInput=0
@@ -222,28 +242,48 @@ installOptions() {
     fi
 
     if [ -z "$basesystem" ]; then
-        baseChoice=$(drawDialog --no-cancel --title "Base system meta package choice" --menu "If you are unsure, choose 'base-system'" 0 0 0 "base-system" "- Traditional base system package" "base-container" "- Minimal base system package targeted at containers and chroots")
+        baseChoice=$(drawDialog --no-cancel --title "基础系统元包选择" --menu "如果不确定，请选择 'base-system'" 0 0 0 "base-system" "- 传统基础系统包" "base-container" "- 面向容器和chroots的最小化基础系统包")
     else
         baseChoice="Custom"
     fi
 
+
     # More filesystems such as zfs can be added later.
     # Until btrfs is any bit stable or performant, it will not be accepted as a feature.
-    fsChoice=$(drawDialog --no-cancel --title "Filesystem choice" --menu "If you are unsure, choose 'ext4'" 0 0 0 "ext4" "" "xfs" "")
+    # fsChoice=$(drawDialog --no-cancel --title "Filesystem choice" --menu "If you are unsure, choose 'ext4'" 0 0 0 "ext4" "" "xfs" "")
 
-    suChoice=$(drawDialog --no-cancel --title "SU choice" --menu "If you are unsure, choose 'sudo'" 0 0 0 "sudo" "" "doas" "" "none" "")
+    # suChoice=$(drawDialog --no-cancel --title "SU choice" --menu "If you are unsure, choose 'sudo'" 0 0 0 "sudo" "" "doas" "" "none" "")
     
+    # if [ -z "$basesystem" ]; then
+    #     kernelChoice=$(drawDialog --no-cancel --title "Kernel choice" --menu "If you are unsure, choose 'linux'" 0 0 0 "linux" "- Normal Void kernel" "linux-lts" "- Older LTS kernel" "linux-mainline" "- Bleeding edge kernel")
+    # else
+    #     kernelChoice="Custom"
+    # fi
+
+    # bootloaderChoice=$(drawDialog --no-cancel --title "Bootloader choice" --menu "If you are unsure, choose 'grub'" 0 0 0 "grub" "- Traditional bootloader" "efistub" "- Boot kernel directly" "uki" "- Unified Kernel Image (experimental)" "none" "- Installs no bootloader (Advanced)")
+
+    # hostnameInput=$(drawDialog --no-cancel --title "System hostname" --inputbox "Set your system hostname." 0 0)
+
+    # createUser=$(drawDialog --title "Create User" --inputbox "What would you like your username to be?\n\nIf you do not want to set a user here, choose 'Skip'\n\nYou will be asked to set a password later." 0 0)
+
+
+    fsChoice=$(drawDialog --no-cancel --title "文件系统选择" --menu "如果不确定，请选择 'ext4'" 0 0 0 "ext4" "" "xfs" "")
+
+    suChoice=$(drawDialog --no-cancel --title "超级用户工具选择" --menu "如果不确定，请选择 'sudo'" 0 0 0 "sudo" "" "doas" "" "none" "")
+
     if [ -z "$basesystem" ]; then
-        kernelChoice=$(drawDialog --no-cancel --title "Kernel choice" --menu "If you are unsure, choose 'linux'" 0 0 0 "linux" "- Normal Void kernel" "linux-lts" "- Older LTS kernel" "linux-mainline" "- Bleeding edge kernel")
+        kernelChoice=$(drawDialog --no-cancel --title "内核选择" --menu "如果不确定，请选择 'linux'" 0 0 0 "linux" "- 常规 Void 内核" "linux-lts" "- 老版本 LTS 内核" "linux-mainline" "- 最新前沿内核")
     else
         kernelChoice="Custom"
     fi
 
-    bootloaderChoice=$(drawDialog --no-cancel --title "Bootloader choice" --menu "If you are unsure, choose 'grub'" 0 0 0 "grub" "- Traditional bootloader" "efistub" "- Boot kernel directly" "uki" "- Unified Kernel Image (experimental)" "none" "- Installs no bootloader (Advanced)")
+    bootloaderChoice=$(drawDialog --no-cancel --title "引导加载程序选择" --menu "如果不确定，请选择 'grub'" 0 0 0 "grub" "- 传统引导加载程序" "efistub" "- 直接引导内核" "uki" "- 统一内核镜像（实验性）" "none" "- 不安装引导加载程序（高级选项）")
 
-    hostnameInput=$(drawDialog --no-cancel --title "System hostname" --inputbox "Set your system hostname." 0 0)
+    hostnameInput=$(drawDialog --no-cancel --title "系统主机名" --inputbox "设置您的系统主机名。" 0 0)
 
-    createUser=$(drawDialog --title "Create User" --inputbox "What would you like your username to be?\n\nIf you do not want to set a user here, choose 'Skip'\n\nYou will be asked to set a password later." 0 0)
+    createUser=$(drawDialog --title "创建用户" --inputbox "您希望您的用户名是什么？\n\n如果您不想设置用户，请选择 '跳过'\n\n稍后您将被要求设置密码。" 0 0)
+
+
 
     # Most of this timezone section is taken from the normal Void installer.
     areas=(Africa America Antarctica Arctic Asia Atlantic Australia Europe Indian Pacific)
@@ -976,9 +1016,35 @@ install() {
 }
 
 # Passing some stuff over to the new install to be used by the secondary script
+# chrootFunction() {
+
+#     commandFailure="System chroot has failed."
+#     cp /etc/resolv.conf /mnt/etc/resolv.conf || failureCheck
+    
+#     syschrootVarPairs=("bootloaderChoice $bootloaderChoice" \
+#     "suChoice $suChoice" \
+#     "timezonePrompt $timezonePrompt" \
+#     "encryptionPrompt $encryptionPrompt" \
+#     "diskInput $diskInput" \
+#     "createUser $createUser" \
+#     "desktopChoice $desktopChoice")
+
+#     for i in "${syschrootVarPairs[@]}"
+#     do
+#         set -- $i || failureCheck
+#         echo "$1='$2'" >> /mnt/tmp/installerOptions || failureCheck
+#     done
+
+#     cp -f $(pwd)/systemchroot.sh /mnt/tmp/systemchroot.sh || failureCheck
+#     chroot /mnt /bin/bash -c "/bin/bash /tmp/systemchroot.sh" || failureCheck
+
+#     postInstall
+
+# }
+
 chrootFunction() {
 
-    commandFailure="System chroot has failed."
+    commandFailure="系统 chroot 失败。"
     cp /etc/resolv.conf /mnt/etc/resolv.conf || failureCheck
     
     syschrootVarPairs=("bootloaderChoice $bootloaderChoice" \
@@ -1002,33 +1068,81 @@ chrootFunction() {
 
 }
 
+
+# drawDialog() {
+
+#     commandFailure="Displaying dialog window has failed."
+#     dialog --stdout --cancel-label "Skip" --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" "$@"
+
+# }
+
 drawDialog() {
 
-    commandFailure="Displaying dialog window has failed."
-    dialog --stdout --cancel-label "Skip" --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" "$@"
+    commandFailure="显示对话框窗口失败。"
+    dialog --stdout --cancel-label "跳过" --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" "$@"
 
 }
 
+# checkModule() {
+
+#     # We need to make sure a few variables at minimum exist before the installer should accept it.
+#     # Past this, I'm going to leave verifying correctness to the author of the module.
+#     if grep "title="*"" "modules/$i" && ( grep "status=on" "modules/$i" || grep "status=off" "modules/$i" ) && ( grep "description="*"" "modules/$i" ) && ( grep "main()" "modules/$i" ); then
+#         return 0
+#     else
+#         # Skip found module file if its contents do not comply.
+#         return 1
+#     fi
+
+# }
+
 checkModule() {
 
-    # We need to make sure a few variables at minimum exist before the installer should accept it.
-    # Past this, I'm going to leave verifying correctness to the author of the module.
+    # 我们需要确保至少存在一些变量，安装程序才能接受这个模块。
+    # 除此之外，模块的正确性验证留给模块的作者来处理。
     if grep "title="*"" "modules/$i" && ( grep "status=on" "modules/$i" || grep "status=off" "modules/$i" ) && ( grep "description="*"" "modules/$i" ) && ( grep "main()" "modules/$i" ); then
         return 0
     else
-        # Skip found module file if its contents do not comply.
+        # 如果模块文件的内容不符合要求，则跳过该模块。
         return 1
     fi
 
 }
 
+
+# failureCheck() {
+
+#     echo -e "${RED}$commandFailure${NC}"
+#     echo "Installation will not proceed."
+#     exit 1
+
+# }
+
 failureCheck() {
 
     echo -e "${RED}$commandFailure${NC}"
-    echo "Installation will not proceed."
+    echo "安装将不会继续。"
     exit 1
 
 }
+
+# diskCalculator() {
+
+#     diskOperand=$(echo $sizeInput | sed 's/G//g')
+#     diskFloat=$(echo $diskFloat - $diskOperand | bc)
+#     diskAvailable=$(echo $diskFloat - 0.5 | bc)
+#     diskAvailable+="G"
+
+#     if [ "$diskFloat" -lt 0 ]; then
+#         clear
+#         echo -e "${RED}Used disk space cannot exceed the maximum capacity of the chosen disk. Have you over-provisioned your disk? ${NC}\n"
+#         read -p "Press Enter to start disk configuration again." </dev/tty
+#         diskConfiguration
+#     fi
+
+#     return 0
+
+# }
 
 diskCalculator() {
 
@@ -1039,8 +1153,8 @@ diskCalculator() {
 
     if [ "$diskFloat" -lt 0 ]; then
         clear
-        echo -e "${RED}Used disk space cannot exceed the maximum capacity of the chosen disk. Have you over-provisioned your disk? ${NC}\n"
-        read -p "Press Enter to start disk configuration again." </dev/tty
+        echo -e "${RED}使用的磁盘空间不能超过所选磁盘的最大容量。您的磁盘是否超额分配了？${NC}\n"
+        read -p "按回车键重新开始磁盘配置。" </dev/tty
         diskConfiguration
     fi
 
@@ -1048,37 +1162,75 @@ diskCalculator() {
 
 }
 
+
+# partitionerOutput() {
+
+#     echo -e "Disk: $diskInput"
+#     echo -e "Disk size: $diskSize"
+#     echo -e "Available disk space: $diskAvailable \n"
+
+#     return 0
+
+# }
+
+
 partitionerOutput() {
 
-    echo -e "Disk: $diskInput"
-    echo -e "Disk size: $diskSize"
-    echo -e "Available disk space: $diskAvailable \n"
+    echo -e "磁盘: $diskInput"
+    echo -e "磁盘大小: $diskSize"
+    echo -e "可用磁盘空间: $diskAvailable \n"
 
     return 0
 
 }
+
+# postInstall() {
+
+#     if [ -z "$modulesChoice" ]; then
+#         clear
+
+#         echo -e "${GREEN}Installation complete.${NC} \n"
+#         echo -e "Please remove installation media and reboot. \n"
+#         exit 0
+#     else
+#         commandFailure="Executing module has failed."
+#         for i in "${modulesChoice[@]}"
+#         do
+#             # Source and execute each module
+#             . "modules/$i"  || failureCheck
+#             main
+#         done
+
+#         clear
+
+#         echo -e "${GREEN}Installation complete.${NC} \n"
+#         echo -e "Please remove installation media and reboot. \n"
+#         exit 0
+#     fi
+
+# }
 
 postInstall() {
 
     if [ -z "$modulesChoice" ]; then
         clear
 
-        echo -e "${GREEN}Installation complete.${NC} \n"
-        echo -e "Please remove installation media and reboot. \n"
+        echo -e "${GREEN}安装完成。${NC} \n"
+        echo -e "请移除安装介质并重启。 \n"
         exit 0
     else
-        commandFailure="Executing module has failed."
+        commandFailure="执行模块失败。"
         for i in "${modulesChoice[@]}"
         do
-            # Source and execute each module
+            # 加载并执行每个模块
             . "modules/$i"  || failureCheck
             main
         done
 
         clear
 
-        echo -e "${GREEN}Installation complete.${NC} \n"
-        echo -e "Please remove installation media and reboot. \n"
+        echo -e "${GREEN}安装完成。${NC} \n"
+        echo -e "请移除安装介质并重启。 \n"
         exit 0
     fi
 
