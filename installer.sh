@@ -286,31 +286,92 @@ installOptions() {
 
 
     # Most of this timezone section is taken from the normal Void installer.
-    areas=(Africa America Antarctica Arctic Asia Atlantic Australia Europe Indian Pacific)
+    # areas=(Africa America Antarctica Arctic Asia Atlantic Australia Europe Indian Pacific)
 
-    if area=$(IFS='|'; drawDialog --title "Set Timezone" --menu "" 0 0 0 $(printf '%s||' "${areas[@]}")) ; then
-        read -a locations -d '\n' < <(find /usr/share/zoneinfo/$area -type f -printf '%P\n' | sort) || echo "Disregard exit code"
-        location=$(IFS='|'; drawDialog --no-cancel --title "Set Timezone" --menu "" 0 0 0 $(printf '%s||' "${locations[@]//_/ }"))
+    # if area=$(IFS='|'; drawDialog --title "Set Timezone" --menu "" 0 0 0 $(printf '%s||' "${areas[@]}")) ; then
+    #     read -a locations -d '\n' < <(find /usr/share/zoneinfo/$area -type f -printf '%P\n' | sort) || echo "Disregard exit code"
+    #     location=$(IFS='|'; drawDialog --no-cancel --title "Set Timezone" --menu "" 0 0 0 $(printf '%s||' "${locations[@]//_/ }"))
+    # fi
+
+    # location=$(echo $location | tr ' ' '_')
+    # timezonePrompt="$area/$location"
+
+    # 大部分时区设置部分来自于普通的 Void 安装程序。
+    # 定义了一个包含可选时区区域的数组，用于后续展示给用户选择。
+    areas=(非洲 美洲 南极洲 北极圈 亚洲 大西洋 澳洲 欧洲 印度洋 太平洋)
+
+    # 使用 drawDialog 显示一个对话框，供用户选择一个大区域（例如：美洲、亚洲等）。
+    # 这个 if 语句执行时，用户可以从显示的菜单中选择他们所在的区域。如果选择成功，变量 area 将保存所选的区域。
+    # `IFS='|'` 设置了内部字段分隔符，使多个选项之间用竖线分隔。`drawDialog` 是一个函数，它展示了一个带有标题和菜单的对话框。
+    if area=$(IFS='|'; drawDialog --title "设置时区" --menu "" 0 0 0 $(printf '%s||' "${areas[@]}")) ; then
+        # 如果用户选择了一个区域，接下来会读取该区域下的具体时区。
+        # `find /usr/share/zoneinfo/$area` 查找该区域下的所有时区文件，并将它们按字母顺序排序。
+        # 使用 `-printf '%P\n'` 仅输出相对路径，而不是完整路径。`sort` 用来对输出结果进行排序。
+        # 结果保存到 `locations` 数组中，供下一个对话框使用。
+        read -a locations -d '\n' < <(find /usr/share/zoneinfo/$area -type f -printf '%P\n' | sort) || echo "忽略退出代码"
+
+        # 继续展示一个对话框，供用户选择具体的时区位置。
+        # 例如，用户如果选择了 "美洲"，接下来可以选择具体的城市或时区（如纽约、洛杉矶等）。
+        # 此时用户选择的时区将存储在 `location` 变量中。
+        location=$(IFS='|'; drawDialog --no-cancel --title "设置时区" --menu "" 0 0 0 $(printf '%s||' "${locations[@]//_/ }"))
     fi
 
+    # 将用户选择的时区名中的空格替换为下划线。`tr ' ' '_'` 用于将空格替换为下划线。
+    # 这一步是为了确保时区名称的格式正确，例如 "Los_Angeles" 而不是 "Los Angeles"。
     location=$(echo $location | tr ' ' '_')
+
+    # 拼接最终的时区字符串，将 `area`（例如 "America"）和 `location`（例如 "New_York"）组合成完整的时区路径。
+    # 最终的结果可能是 "America/New_York" 这样的格式，并存储在 `timezonePrompt` 变量中，供后续使用。
     timezonePrompt="$area/$location"
 
-    # This line is also taken from the normal Void installer.
+
+
+    # # This line is also taken from the normal Void installer.
+    # localeList=$(grep -E '\.UTF-8' /etc/default/libc-locales | awk '{print $1}' | sed -e 's/^#//')
+
+    # for i in $localeList
+    # do
+    #     # We don't need to specify an item here, only a tag and print it to stdout
+    #     tmp+=("$i" $(printf '\u200b')) # Use a zero width unicode character for the item
+    # done
+
+    # localeChoice=$(drawDialog --no-cancel --title "Locale Selection" --menu "Please choose your system locale." 0 0 0 ${tmp[@]})
+
+    # locale="LANG=$localeChoice"
+    # libclocale="$localeChoice UTF-8"
+
+    # if drawDialog --title "Repository Mirror" --yesno "Would you like to set your repo mirror?" 0 0 ; then
+    #     xmirror
+    #     installRepo=$(cat /etc/xbps.d/*-repository-main.conf | sed 's/repository=//g')
+    # else
+    #     if [ "$muslSelection" == "glibc" ]; then
+    #         installRepo="https://repo-default.voidlinux.org/current"
+    #     elif [ "$muslSelection" == "musl" ]; then
+    #         installRepo="https://repo-default.voidlinux.org/current/musl"
+    #     fi
+    # fi
+
+    # if [ "$muslSelection" == "glibc" ]; then
+    #     ARCH="x86_64"
+    # elif [ "$muslSelection" == "musl" ]; then
+    #     ARCH="x86_64-musl"
+    # fi
+
+    # 这一行也来自于普通的 Void 安装程序。
     localeList=$(grep -E '\.UTF-8' /etc/default/libc-locales | awk '{print $1}' | sed -e 's/^#//')
 
     for i in $localeList
     do
-        # We don't need to specify an item here, only a tag and print it to stdout
-        tmp+=("$i" $(printf '\u200b')) # Use a zero width unicode character for the item
+        # 我们在这里不需要指定项，只需要一个标签并将其打印到标准输出即可
+        tmp+=("$i" $(printf '\u200b')) # 使用一个零宽度的 Unicode 字符作为项目
     done
 
-    localeChoice=$(drawDialog --no-cancel --title "Locale Selection" --menu "Please choose your system locale." 0 0 0 ${tmp[@]})
+    localeChoice=$(drawDialog --no-cancel --title "语言环境选择" --menu "请选择您的系统语言环境。" 0 0 0 ${tmp[@]})
 
     locale="LANG=$localeChoice"
     libclocale="$localeChoice UTF-8"
 
-    if drawDialog --title "Repository Mirror" --yesno "Would you like to set your repo mirror?" 0 0 ; then
+    if drawDialog --title "镜像源设置" --yesno "您想要设置您的软件源镜像吗？" 0 0 ; then
         xmirror
         installRepo=$(cat /etc/xbps.d/*-repository-main.conf | sed 's/repository=//g')
     else
@@ -327,42 +388,85 @@ installOptions() {
         ARCH="x86_64-musl"
     fi
 
-    installType=$(drawDialog --no-cancel --title "Profile Choice" --menu "Choose your installation profile:" 0 0 0 "minimal" " - Installs base system only, dhcpcd included for networking." "desktop" "- Provides extra optional install choices.")
 
-    # Extra install options
+
+    # installType=$(drawDialog --no-cancel --title "Profile Choice" --menu "Choose your installation profile:" 0 0 0 "minimal" " - Installs base system only, dhcpcd included for networking." "desktop" "- Provides extra optional install choices.")
+    installType=$(drawDialog --no-cancel --title "安装配置选择" --menu "请选择您的安装配置：" 0 0 0 "minimal" " - 仅安装基础系统，包含用于网络的 dhcpcd。" "desktop" "- 提供额外的可选安装选项。")
+    
+    # # Extra install options
+    # if [ "$installType" == "desktop" ]; then
+
+    #     if [ "$muslSelection" == "glibc" ]; then
+    #         graphicsChoice=$(drawDialog --title 'Graphics Drivers' --checklist 'Select graphics drivers: ' 0 0 0 'intel' '' 'off' 'intel-32bit' '' 'off' 'amd' '' 'off' 'amd-32bit' '' 'off' 'nvidia' '- Proprietary driver' 'off' 'nvidia-32bit' '' 'off' 'nvidia-nouveau' '- Nvidia Nouveau driver (experimental)' 'off' 'nvidia-nouveau-32bit' '' 'off')
+    #     elif [ "$muslSelection" == "musl" ]; then
+    #         graphicsChoice=$(drawDialog --title 'Graphics Drivers' --checklist 'Select graphics drivers: ' 0 0 0 'intel' '' 'off' 'amd' '' 'off' 'nvidia-nouveau' '- Nvidia Nouveau driver (experimental)' 'off') 
+    #     fi
+
+    #     if [ ! -z "$graphicsChoice" ]; then
+    #         IFS=" " read -r -a graphicsArray <<< "$graphicsChoice"
+    #     fi
+
+    #     networkChoice=$(drawDialog --title "Networking" --menu "If you are unsure, choose 'NetworkManager'\n\nChoose 'Skip' if you want to skip." 0 0 0 "NetworkManager" "" "dhcpcd" "")
+
+    #     audioChoice=$(drawDialog --title "Audio Server" --menu "If you are unsure, 'pipewire' is recommended.\n\nChoose 'Skip' if you want to skip." 0 0 0 "pipewire" "" "pulseaudio" "")
+
+    #     desktopChoice=$(drawDialog --title "Desktop Environment" --menu "Choose 'Skip' if you want to skip." 0 0 0 "gnome" "" "kde" "" "xfce" "" "sway" "" "swayfx" "" "wayfire" "" "i3" "")
+
+    #     case $desktopChoice in
+    #         sway)
+    #             drawDialog --msgbox "Sway will have to be started manually on login. This can be done by entering 'dbus-run-session sway' after logging in on the new installation." 0 0
+    #             ;;
+
+    #         swayfx)
+    #             drawDialog --msgbox "SwayFX will have to be started manually on login. This can be done by entering 'dbus-run-session sway' after logging in on the new installation." 0 0
+    #             ;;
+
+    #         wayfire)
+    #             drawDialog --msgbox "Wayfire will have to be started manually on login. This can be done by entering 'dbus-run-session wayfire' after logging in on the new installation." 0 0
+    #             ;;
+
+    #         i3)
+    #             if drawDialog --title "" --yesno "Would you like to install lightdm with i3?" 0 0 ; then
+    #                 i3prompt="Yes"
+    #             fi
+    #             ;;
+    #     esac
+
+
+    # 额外安装选项
     if [ "$installType" == "desktop" ]; then
 
         if [ "$muslSelection" == "glibc" ]; then
-            graphicsChoice=$(drawDialog --title 'Graphics Drivers' --checklist 'Select graphics drivers: ' 0 0 0 'intel' '' 'off' 'intel-32bit' '' 'off' 'amd' '' 'off' 'amd-32bit' '' 'off' 'nvidia' '- Proprietary driver' 'off' 'nvidia-32bit' '' 'off' 'nvidia-nouveau' '- Nvidia Nouveau driver (experimental)' 'off' 'nvidia-nouveau-32bit' '' 'off')
+            graphicsChoice=$(drawDialog --title '图形驱动程序' --checklist '选择图形驱动程序: ' 0 0 0 'intel' '' 'off' 'intel-32bit' '' 'off' 'amd' '' 'off' 'amd-32bit' '' 'off' 'nvidia' '- 专有驱动程序' 'off' 'nvidia-32bit' '' 'off' 'nvidia-nouveau' '- Nvidia Nouveau 驱动（实验性）' 'off' 'nvidia-nouveau-32bit' '' 'off')
         elif [ "$muslSelection" == "musl" ]; then
-            graphicsChoice=$(drawDialog --title 'Graphics Drivers' --checklist 'Select graphics drivers: ' 0 0 0 'intel' '' 'off' 'amd' '' 'off' 'nvidia-nouveau' '- Nvidia Nouveau driver (experimental)' 'off') 
+            graphicsChoice=$(drawDialog --title '图形驱动程序' --checklist '选择图形驱动程序: ' 0 0 0 'intel' '' 'off' 'amd' '' 'off' 'nvidia-nouveau' '- Nvidia Nouveau 驱动（实验性）' 'off') 
         fi
 
         if [ ! -z "$graphicsChoice" ]; then
             IFS=" " read -r -a graphicsArray <<< "$graphicsChoice"
         fi
 
-        networkChoice=$(drawDialog --title "Networking" --menu "If you are unsure, choose 'NetworkManager'\n\nChoose 'Skip' if you want to skip." 0 0 0 "NetworkManager" "" "dhcpcd" "")
+        networkChoice=$(drawDialog --title "网络" --menu "如果不确定，请选择 'NetworkManager'\n\n如果想跳过，请选择 '跳过'。" 0 0 0 "NetworkManager" "" "dhcpcd" "")
 
-        audioChoice=$(drawDialog --title "Audio Server" --menu "If you are unsure, 'pipewire' is recommended.\n\nChoose 'Skip' if you want to skip." 0 0 0 "pipewire" "" "pulseaudio" "")
+        audioChoice=$(drawDialog --title "音频服务" --menu "如果不确定，推荐选择 'pipewire'。\n\n如果想跳过，请选择 '跳过'。" 0 0 0 "pipewire" "" "pulseaudio" "")
 
-        desktopChoice=$(drawDialog --title "Desktop Environment" --menu "Choose 'Skip' if you want to skip." 0 0 0 "gnome" "" "kde" "" "xfce" "" "sway" "" "swayfx" "" "wayfire" "" "i3" "")
+        desktopChoice=$(drawDialog --title "桌面环境" --menu "如果想跳过，请选择 '跳过'。" 0 0 0 "gnome" "" "kde" "" "xfce" "" "sway" "" "swayfx" "" "wayfire" "" "i3" "")
 
         case $desktopChoice in
             sway)
-                drawDialog --msgbox "Sway will have to be started manually on login. This can be done by entering 'dbus-run-session sway' after logging in on the new installation." 0 0
+                drawDialog --msgbox "Sway 需要在登录时手动启动。您可以在新系统中登录后输入 'dbus-run-session sway' 启动。" 0 0
                 ;;
 
             swayfx)
-                drawDialog --msgbox "SwayFX will have to be started manually on login. This can be done by entering 'dbus-run-session sway' after logging in on the new installation." 0 0
+                drawDialog --msgbox "SwayFX 需要在登录时手动启动。您可以在新系统中登录后输入 'dbus-run-session sway' 启动。" 0 0
                 ;;
 
             wayfire)
-                drawDialog --msgbox "Wayfire will have to be started manually on login. This can be done by entering 'dbus-run-session wayfire' after logging in on the new installation." 0 0
+                drawDialog --msgbox "Wayfire 需要在登录时手动启动。您可以在新系统中登录后输入 'dbus-run-session wayfire' 启动。" 0 0
                 ;;
 
             i3)
-                if drawDialog --title "" --yesno "Would you like to install lightdm with i3?" 0 0 ; then
+                if drawDialog --title "" --yesno "是否要与 i3 一起安装 lightdm?" 0 0 ; then
                     i3prompt="Yes"
                 fi
                 ;;
