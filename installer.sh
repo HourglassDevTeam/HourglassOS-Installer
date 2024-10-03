@@ -1194,11 +1194,96 @@ install() {
     echo $hostnameInput > /mnt/etc/hostname || failureCheck
 
 
+    # if [ "$installType" == "minimal" ]; then
+    #     chrootFunction
+    # elif [ "$installType" == "desktop" ]; then
+
+    #     commandFailure="Graphics driver installation has failed."
+
+    #     for i in "${graphicsArray[@]}"
+    #     do
+
+    #         case $i in
+
+    #             amd)
+    #                 echo -e "Installing AMD graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt mesa-dri vulkan-loader mesa-vulkan-radeon mesa-vaapi mesa-vdpau || failureCheck
+    #                 echo -e "AMD graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             amd-32bit)
+    #                 echo -e "Installing 32-bit AMD graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
+    #                 xmirror -s "$installRepo" -r /mnt || failureCheck
+    #                 xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit || failureCheck
+    #                 echo -e "32-bit AMD graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             nvidia)
+    #                 echo -e "Installing NVIDIA graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt void-repo-nonfree || failureCheck
+    #                 xmirror -s "$installRepo" -r /mnt || failureCheck
+    #                 xbps-install -Sy -R $installRepo -r /mnt nvidia || failureCheck
+
+    #                 # Enabling mode setting for wayland compositors
+    #                 if [ "$bootloaderChoice" == "grub" ]; then
+    #                     sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4/GRUB_CMDLINE_DEFAULT="loglevel=4 nvidia_drm.modeset=1/g' /mnt/etc/default/grub || failureCheck 
+    #                 elif [ "$bootloaderChoice" == "efistub" ]; then
+    #                     sed -i -e 's/OPTIONS="loglevel=4/OPTIONS="loglevel=4 nvidia_drm.modeset=1/g' /mnt/etc/default/efibootmgr-kernel-hook || failureCheck
+    #                 fi
+
+    #                 echo -e "NVIDIA graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             nvidia-32bit)
+    #                 echo -e "Installing 32-bit NVIDIA graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib-nonfree void-repo-multilib || failureCheck
+    #                 xmirror -s "$installRepo" -r /mnt || failureCheck
+    #                 xbps-install -Sy -R $installRepo -r /mnt nvidia-libs-32bit || failureCheck
+    #                 echo -e "32-bit NVIDIA graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             intel)
+    #                 echo -e "Installing INTEL graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt mesa-dri vulkan-loader mesa-vulkan-intel intel-video-accel || failureCheck
+    #                 echo -e "INTEL graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             intel-32bit)
+    #                 echo -e "Installing 32-bit INTEL graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
+    #                 xmirror -s "$installRepo" -r /mnt || failureCheck
+    #                 xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit || failureCheck
+    #                 echo -e "32-bit INTEL graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             nvidia-nouveau)
+    #                 echo -e "Installing NOUVEAU graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt mesa-dri mesa-nouveau-dri || failureCheck
+    #                 echo -e "NOUVEAU graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             nvidia-nouveau-32bit)
+    #                 echo -e "Installing 32-bit NOUVEAU graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
+    #                 xmirror -s "$installRepo" -r /mnt || failureCheck
+    #                 xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit mesa-nouveau-dri-32bit || failureCheck
+    #                 echo -e "32-bit NOUVEAU graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             *)
+    #                 echo -e "Continuing without graphics drivers... \n"
+    #                 ;;
+
+    #         esac
+
+    #     done
+
     if [ "$installType" == "minimal" ]; then
         chrootFunction
     elif [ "$installType" == "desktop" ]; then
 
-        # commandFailure="Graphics driver installation has failed."
+    # commandFailure="Graphics driver installation has failed."
         commandFailure="图形驱动程序安装失败。"
 
         for i in "${graphicsArray[@]}"
@@ -1207,107 +1292,139 @@ install() {
             case $i in
 
                 amd)
-                    echo -e "Installing AMD graphics drivers... \n"
+                    echo -e "正在安装 AMD 图形驱动... \n"
                     xbps-install -Sy -R $installRepo -r /mnt mesa-dri vulkan-loader mesa-vulkan-radeon mesa-vaapi mesa-vdpau || failureCheck
-                    echo -e "AMD graphics drivers have been installed. \n"
+                    echo -e "AMD 图形驱动安装完成。 \n"
                     ;;
 
                 amd-32bit)
-                    echo -e "Installing 32-bit AMD graphics drivers... \n"
+                    echo -e "正在安装 32 位 AMD 图形驱动... \n"
                     xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
                     xmirror -s "$installRepo" -r /mnt || failureCheck
                     xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit || failureCheck
-                    echo -e "32-bit AMD graphics drivers have been installed. \n"
+                    echo -e "32 位 AMD 图形驱动安装完成。 \n"
                     ;;
 
                 nvidia)
-                    echo -e "Installing NVIDIA graphics drivers... \n"
+                    echo -e "正在安装 NVIDIA 图形驱动... \n"
                     xbps-install -Sy -R $installRepo -r /mnt void-repo-nonfree || failureCheck
                     xmirror -s "$installRepo" -r /mnt || failureCheck
                     xbps-install -Sy -R $installRepo -r /mnt nvidia || failureCheck
 
-                    # Enabling mode setting for wayland compositors
+                    # 为 Wayland 合成器启用模式设置
                     if [ "$bootloaderChoice" == "grub" ]; then
                         sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4/GRUB_CMDLINE_DEFAULT="loglevel=4 nvidia_drm.modeset=1/g' /mnt/etc/default/grub || failureCheck 
                     elif [ "$bootloaderChoice" == "efistub" ]; then
                         sed -i -e 's/OPTIONS="loglevel=4/OPTIONS="loglevel=4 nvidia_drm.modeset=1/g' /mnt/etc/default/efibootmgr-kernel-hook || failureCheck
                     fi
 
-                    echo -e "NVIDIA graphics drivers have been installed. \n"
+                    echo -e "NVIDIA 图形驱动安装完成。 \n"
                     ;;
 
                 nvidia-32bit)
-                    echo -e "Installing 32-bit NVIDIA graphics drivers... \n"
+                    echo -e "正在安装 32 位 NVIDIA 图形驱动... \n"
                     xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib-nonfree void-repo-multilib || failureCheck
                     xmirror -s "$installRepo" -r /mnt || failureCheck
                     xbps-install -Sy -R $installRepo -r /mnt nvidia-libs-32bit || failureCheck
-                    echo -e "32-bit NVIDIA graphics drivers have been installed. \n"
+                    echo -e "32 位 NVIDIA 图形驱动安装完成。 \n"
                     ;;
 
                 intel)
-                    echo -e "Installing INTEL graphics drivers... \n"
+                    echo -e "正在安装 Intel 图形驱动... \n"
                     xbps-install -Sy -R $installRepo -r /mnt mesa-dri vulkan-loader mesa-vulkan-intel intel-video-accel || failureCheck
-                    echo -e "INTEL graphics drivers have been installed. \n"
+                    echo -e "Intel 图形驱动安装完成。 \n"
                     ;;
 
                 intel-32bit)
-                    echo -e "Installing 32-bit INTEL graphics drivers... \n"
+                    echo -e "正在安装 32 位 Intel 图形驱动... \n"
                     xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
                     xmirror -s "$installRepo" -r /mnt || failureCheck
                     xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit || failureCheck
-                    echo -e "32-bit INTEL graphics drivers have been installed. \n"
+                    echo -e "32 位 Intel 图形驱动安装完成。 \n"
                     ;;
 
                 nvidia-nouveau)
-                    echo -e "Installing NOUVEAU graphics drivers... \n"
+                    echo -e "正在安装 Nouveau 图形驱动... \n"
                     xbps-install -Sy -R $installRepo -r /mnt mesa-dri mesa-nouveau-dri || failureCheck
-                    echo -e "NOUVEAU graphics drivers have been installed. \n"
+                    echo -e "Nouveau 图形驱动安装完成。 \n"
                     ;;
 
                 nvidia-nouveau-32bit)
-                    echo -e "Installing 32-bit NOUVEAU graphics drivers... \n"
+                    echo -e "正在安装 32 位 Nouveau 图形驱动... \n"
                     xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
                     xmirror -s "$installRepo" -r /mnt || failureCheck
                     xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit mesa-nouveau-dri-32bit || failureCheck
-                    echo -e "32-bit NOUVEAU graphics drivers have been installed. \n"
+                    echo -e "32 位 Nouveau 图形驱动安装完成。 \n"
                     ;;
 
                 *)
-                    echo -e "Continuing without graphics drivers... \n"
+                    echo -e "继续安装，没有图形驱动... \n"
                     ;;
 
             esac
 
         done
 
+
+        # if [ "$networkChoice" == "NetworkManager" ]; then
+        #     commandFailure="NetworkManager installation has failed."
+        #     echo -e "Installing NetworkManager... \n"
+        #     xbps-install -Sy -R $installRepo -r /mnt NetworkManager || failureCheck
+        #     chroot /mnt /bin/bash -c "ln -s /etc/sv/NetworkManager /var/service" || failureCheck
+        #     echo -e "NetworkManager has been installed. \n"
+        # elif [ "$networkChoice" == "dhcpcd" ]; then
+        #     chroot /mnt /bin/bash -c "ln -s /etc/sv/dhcpcd /var/service" || failureCheck
+        # fi
+
+        # commandFailure="Audio server installation has failed."
+        # if [ "$audioChoice" == "pipewire" ]; then
+        #     echo -e "Installing pipewire... \n"
+        #     xbps-install -Sy -R $installRepo -r /mnt pipewire alsa-pipewire wireplumber || failureCheck
+        #     mkdir -p /mnt/etc/alsa/conf.d || failureCheck
+        #     mkdir -p /mnt/etc/pipewire/pipewire.conf.d || failureCheck
+
+        #     # This is now required to start pipewire and its session manager 'wireplumber' in an appropriate order, this should achieve a desireable result system-wide.
+        #     echo 'context.exec = [ { path = "/usr/bin/wireplumber" args = "" } ]' > /mnt/etc/pipewire/pipewire.conf.d/10-wireplumber.conf || failureCheck
+
+        #     echo -e "Pipewire has been installed. \n"
+        # elif [ "$audioChoice" == "pulseaudio" ]; then
+        #     echo -e "Installing pulseaudio... \n"
+        #     xbps-install -Sy -R $installRepo -r /mnt pulseaudio alsa-plugins-pulseaudio || failureCheck
+        #     echo -e "Pulseaudio has been installed. \n"
+        # fi
+
+        # commandFailure="GUI installation has failed."
+
+
         if [ "$networkChoice" == "NetworkManager" ]; then
-            commandFailure="NetworkManager installation has failed."
-            echo -e "Installing NetworkManager... \n"
+            commandFailure="NetworkManager 安装失败。"
+            echo -e "正在安装 NetworkManager... \n"
             xbps-install -Sy -R $installRepo -r /mnt NetworkManager || failureCheck
             chroot /mnt /bin/bash -c "ln -s /etc/sv/NetworkManager /var/service" || failureCheck
-            echo -e "NetworkManager has been installed. \n"
+            echo -e "NetworkManager 已安装。 \n"
         elif [ "$networkChoice" == "dhcpcd" ]; then
             chroot /mnt /bin/bash -c "ln -s /etc/sv/dhcpcd /var/service" || failureCheck
         fi
 
-        commandFailure="Audio server installation has failed."
+        commandFailure="音频服务器安装失败。"
         if [ "$audioChoice" == "pipewire" ]; then
-            echo -e "Installing pipewire... \n"
+            echo -e "正在安装 Pipewire... \n"
             xbps-install -Sy -R $installRepo -r /mnt pipewire alsa-pipewire wireplumber || failureCheck
             mkdir -p /mnt/etc/alsa/conf.d || failureCheck
             mkdir -p /mnt/etc/pipewire/pipewire.conf.d || failureCheck
 
-            # This is now required to start pipewire and its session manager 'wireplumber' in an appropriate order, this should achieve a desireable result system-wide.
+            # 现在需要以合适的顺序启动 pipewire 及其会话管理器 'wireplumber'，以实现系统范围内的理想结果。
             echo 'context.exec = [ { path = "/usr/bin/wireplumber" args = "" } ]' > /mnt/etc/pipewire/pipewire.conf.d/10-wireplumber.conf || failureCheck
 
-            echo -e "Pipewire has been installed. \n"
+            echo -e "Pipewire 已安装。 \n"
         elif [ "$audioChoice" == "pulseaudio" ]; then
-            echo -e "Installing pulseaudio... \n"
+            echo -e "正在安装 Pulseaudio... \n"
             xbps-install -Sy -R $installRepo -r /mnt pulseaudio alsa-plugins-pulseaudio || failureCheck
-            echo -e "Pulseaudio has been installed. \n"
+            echo -e "Pulseaudio 已安装。 \n"
         fi
 
-        commandFailure="GUI installation has failed."
+        commandFailure="图形界面安装失败。"
+
 
         case $desktopChoice in
 
@@ -1400,8 +1517,15 @@ install() {
 
         clear
 
-        echo -e "Desktop setup completed. \n"
-        echo -e "The system will now chroot into the new installation for final setup... \n"
+        # echo -e "Desktop setup completed. \n"
+        # echo -e "The system will now chroot into the new installation for final setup... \n"
+        # sleep 1
+
+        # chroot 是 Linux 和类 Unix 系统中的一个命令，它将当前或某个进程的根目录更改为一个新的目录，从而创建一个“受限的”运行环境。
+        # 在这个环境中，程序无法访问新根目录以外的文件系统部分。chroot 的名称来源于“change root”（改变根目录）。
+
+        echo -e "桌面环境设置完成。 \n"
+        echo -e "系统将 chroot 进入新安装的环境进行最终设置... \n"
         sleep 1
 
         chrootFunction
