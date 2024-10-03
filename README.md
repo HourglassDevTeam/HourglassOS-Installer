@@ -1,164 +1,140 @@
-# hourglassOS-install-script
-TUI Shell script installer for hourglassOS, a void linux based system tailored for web 3.0
+# HourglassOS Installer
 
-This installer was primarily created to serve as an installer with encryption support while also having general installation options one would want, with sane defaults.
+该 TUI Shell 脚本安装程序用于 hourglassOS，这是一个基于 Void Linux 的系统，专为 Web 3.0 量身打造。
 
-The overall goal of this installer is to deploy a system that is ready to use as soon as the installer exits.
+该安装程序的主要目标是提供一个支持加密功能的安装选项，同时也提供了其他常用的通用安装选项，并且配备了合理的默认设置。
 
-![TUI Image](https://github.com/kkrruumm/void-install-script/blob/main/images/tuiscreenshot.png)
+该安装程序的整体目标是在安装程序退出后，立即实现一个高度定制、可用的系统。
 
-# Features
-```
--Option to add user-created modules to be executed by the installer, see modules notes
--Included modules do various things, a few included ones:
---Option to enable system logging with socklog
---Option to install wifi firmware and basic utilities
---Option to install Flatpak with Flathub repository
---Option to install and preconfigure qemu and libvirt
---Option to install nftables with a default firewall config
---Various security related modules
+# 特性
+- 可选择添加用户自定义模块，供安装程序执行，详见模块说明
+- 内置模块执行多项功能，部分包括：
+  - 启用系统日志记录功能（使用 socklog）
+  - 安装 Wi-Fi 固件及基础工具
+  - 安装 Flatpak 并预配置 Flathub 仓库
+  - 安装并预配置 qemu 和 libvirt
+  - 安装 nftables 并附带默认的防火墙配置
+  - 各类安全相关模块
 
--Option to choose between grub, efistub, and experimental UKI support
+- 可选择使用 grub、efistub 和实验性 UKI 支持
 
--Option to encrypt installation disk
---With UKI setup, encryption will encrypt both /boot and / using luks2
---With efistup setup, encryption will encrypt / using luks2
---With grub setup, encryption will encrypt both /boot and / using luks1
+- 可选择对安装磁盘进行加密
+  - 使用 UKI 配置时，加密将使用 luks2 加密 /boot 和 /
+  - 使用 efistub 配置时，加密将使用 luks2 加密 /
+  - 使用 grub 配置时，加密将使用 luks1 加密 /boot 和 /
 
--Option to pre-install and pre-configure the following:
---Graphics drivers (amd, nvidia, intel, nvidia-nouveau, none)
---Networking (dhcpcd, NetworkManager, none)
---Audio server (pipewire, pulseaudio, none)
---DE or WM (gnome, kde, xfce, sway, swayfx, wayfire, i3, none)
---Or, choose to do none of these and install a bare-minimum system
+- 可选择预安装并预配置以下内容：
+  - 图形驱动（amd、nvidia、intel、nvidia-nouveau 或不安装）
+  - 网络管理（dhcpcd、NetworkManager 或不安装）
+  - 音频服务器（pipewire、pulseaudio 或不安装）
+  - 桌面环境或窗口管理器（gnome、kde、xfce、sway、swayfx、wayfire、i3 或不安装）
+  - 或者，选择不安装这些，安装一个最小化系统
 
--Option to choose between base-system and base-container base system meta packages
--Option to securely erase the installation disk with shred
--Option to choose either doas or sudo
--Option to choose your repository mirror
--Option to choose between linux, linux-lts, and linux-mainline kernels
--Option to choose between xfs and ext4 filesystems
--Configure partitions in the installer for home, swap, and root with LVM
--Support for both glibc and musl
--User creation and basic configuration
-```
+- 可选择 base-system 或 base-container 基础系统元包
+- 可选择使用 shred 安全擦除安装磁盘
+- 可选择 doas 或 sudo
+- 可选择使用的仓库镜像
+- 可选择 linux、linux-lts 或 linux-mainline 内核
+- 可选择 xfs 或 ext4 文件系统
+- 在安装程序中配置 home、swap 和 root 分区，并支持 LVM
+- 支持 glibc 和 musl
+- 用户创建及基本配置
 
-# Instructions
-```
-Boot into a Void Linux live medium
-Login as anon
-sudo xbps-install -S git
-git clone https://github.com/kkrruumm/void-install-script/
-cd void-install-script
-chmod +x installer.sh
-sudo ./installer.sh
-Follow on-screen steps
-Done.
-```
+# 安装指南
+1. 引导进入 Void Linux 的 live 媒体
+2. 以 anon 用户登录
+3. 执行以下命令：
+   - `sudo xbps-install -S git`
+   - `git clone https://github.com/kkrruumm/void-install-script/`
+4. 进入脚本目录：
+   - `cd void-install-script`
+5. 为安装脚本赋予执行权限：
+   - `chmod +x installer.sh`
+6. 运行安装脚本：
+   - `sudo ./installer.sh`
+7. 按照屏幕上的步骤操作
+8. 完成。
 
-# efistub and UKI notes
 
-UKI setup *will* provide full-disk-encryption as both / and /boot will be encrypted with luks2.
+# efistub 和 UKI 注意事项
 
-efistub setup will *not* provide full-disk-encryption as /boot will not be encrypted.
-However, root will be encrypted using luks2 instead of luks1, since grub is no longer a constraint here.
+UKI 设置**将**提供全盘加密功能，因为 `/` 和 `/boot` 都将通过 luks2 加密。
 
-Do keep in mind potential security issues regarding weaker key derivation functions, such as pbkdf2 which is used with luks1 here, rather than argon2id with luks2.
+efistub 设置**不会**提供全盘加密功能，因为 `/boot` 不会被加密。不过，根分区会使用 luks2 加密，而不是 luks1，因为这里不再受 grub 的限制。
 
-efistub and UKIs *can* both be a bit touchy on some (non entirely UEFI standards compliant) motherboards, though this doesn't seem to be much of a problem as long as we "trick" boards into not deleting the boot entry.
+请注意潜在的安全问题，例如使用 luks1 时使用较弱的密钥派生函数（如 pbkdf2），而不是 luks2 中使用的 argon2id。
 
-# Modules notes
+efistub 和 UKI 在某些主板（不完全符合 UEFI 标准的主板）上**可能**会有些敏感，但这似乎不是大问题，只要我们“巧妙地”避免主板删除启动项。
 
-A barebones "module" system has been added to the installer to make adding misc features simpler and more organized.
+# 模块说明
 
-To create a module, create a file in the 'modules' directory that comes with this installer, its name should be the title of your module.
+在安装程序中添加了一个基础的“模块”系统，以简化和组织各种功能的添加。
 
-Then, add at minimum the 3 required variables and 1 required function to this file.
-If any of the 3 required variables or the 1 required function are missing, the installer will not import the module.
+要创建模块，请在随安装程序提供的 `modules` 目录中创建一个文件，其文件名应为模块的标题。
 
-Example module file contents:
+然后，至少在此文件中添加 3 个必需的变量和 1 个必需的函数。如果缺少任何一个必需的变量或函数，安装程序将不会导入该模块。
+
+模块文件内容示例：
 
 ```
 title=nameofmymodule
-description="- This module does XYZ"
+description="- 这个模块执行 XYZ 操作"
 status=off
 
 main() {
-    # Do cool stuff here
+    # 在这里执行你的操作
 }
 ```
 
-The title variable here will both be the name of the entry in the TUI, but also the name of the file the installer will look for.
+- `title` 变量将作为 TUI 中的条目名称，也是安装程序查找的文件名。
+- `description` 变量是提供给用户的附加信息，显示在 TUI 中的选项旁，可以留空，但必须存在。
+- `status` 变量告诉安装程序模块默认是启用还是禁用，合法值为 `on` 或 `off`。
 
-The description variable will be the extra information given to the user in the TUI along with the option and can be left empty, but must exist.
-
-The status variable tells the installer whether or not the module should be enabled or disabled by default, valid values are on/off.
-
-Inside of the main() function, you're free to add any commands you'd like to be executed, and you can access all variables set by the primary install script.
+在 `main()` 函数中，你可以自由添加任何需要执行的命令，并可以访问主安装脚本设置的所有变量。
 
 
+你可以参考一些安装程序中自带的模块文件，获取更多示例。
 
-That's it!
 
-Feel free to check out some of the installers included modules for further example.
+# 隐藏的安装选项
 
-# Hidden installer options
+有一些选项并未直接展示给用户，因为它们可能具有潜在的风险。用户可以通过创建一个文件来设置这些变量，并在执行安装程序时作为标志传递该文件。
 
-There are a few options that aren't exposed directly to the user because they can potentially be dangerous, but can be changed by creating a file that sets these variables and adding it as a flag when executing the installer.
-
-Example: 
+示例：
 ```
 ./installer.sh /path/to/file
 ```
 
-Such file would contain any or all of the following options, and the following examples are set to their default values:
+该文件可以包含以下任何或全部选项，示例中的值为默认设置：
 
 ```
 acpi="true"
 hash="sha512"
 keysize="512"
 itertime="10000"
-basesystem="*" # Define base system packages instead of using metapackage
+basesystem="*" # 自定义基础系统包，而不是使用元包
 ```
 
-If none of these variables are set in the file, or no file is provided, the above defaults will be used.
+如果文件中未设置这些变量，或未提供文件，则将使用上述默认值。
 
-The toggle for ACPI can be set to false if you are facing ACPI related issues. This will set the "acpi=off" kernel parameter on the new install. Do not change this setting unless absolutely necessary.
+- `acpi` 切换可以设置为 `false`，以解决 ACPI 相关问题。这将为新安装设置内核参数 `acpi=off`。除非绝对必要，否则不要更改此设置。
+- `hash`、`keysize` 和 `itertime` 都是用于加密安装时修改 LUKS 设置的变量。
 
-hash, keysize, and itertime are all variables that change the LUKS settings for encrypted installations.
+我不建议更改 `hash` 和 `keysize` 的默认值，除非你非常确定需要更改。在更改这些值之前，请先进行研究。
 
-I do not recommend changing hash and keysize from their default values unless you are absolutely certain you would like to. Research this before changing values.
+`itertime` 稍微宽松一些。简而言之，值越大，暴力破解该磁盘所需的时间越长。
 
-itertime is a bit less strict. As a TL;DR, the higher this value is, the longer brute-forcing this drive should take. 
+该值表示解锁磁盘所需的毫秒数，基于当前系统的计算能力。如果将此磁盘移到 CPU 更快的系统上，解锁速度将更快。
 
-The value here will equal the amount of time it takes to unlock the drive in milliseconds calculated for the system this is ran on. If this drive is then put into a system with a faster CPU, it will unlock quicker.
+LUKS 默认值为 "2000"，即 2 秒。此安装程序中的默认值已增加，以考虑处理器较慢的系统（以及更注重安全的用户）。
 
-The LUKS default is "2000", or 2 seconds. The default in this installer has been raised with systems that have slower CPUs (and users that are more security conscious) in mind.
+根据 OWASP，符合 FIPS140 标准的值为 600000（即 10 分钟的磁盘解锁时间）。
 
-The fips140 compliant value here would be 600000 according to owasp, though this would result in a 10 minute disk unlock time.
+隐藏设置功能的作用是提供更低级的控制，而不会增加安装程序的视觉负担。
 
-The role of the hidden settings feature is to provide lower level control without adding visual bloat to the installer.
 
-# Misc notes
+# 其他说明
 
-This installer is not officially supported, and is still fairly work-in-progress. If you run into any problems please file them on this github page.
+该安装程序仅支持 x86_64-efi，目前没有计划支持其他架构。
 
-This installer only supports x86_64-efi. I currently have no plans to support anything else.
-
-The base-system metapackage should be chosen in *most* scenarios, though using base-container provides a slightly more minimal install.
-
-If you have found this script useful, do star this repository!
-
-# Contributing
-
-The best way to contribute to this would be to create a pull request adding the feature you would like.
-
-If you would like a change to be made to the script, a request/suggestion in the issues tracker is also a wonderful place to start.
-
-Niche requests for features that do not fit the scope of this installer are unlikely to be entertained, but do not hesitate to suggest ideas.
-
-# TODO
-```
--ZFS support with zfsbootmenu is planned
--You tell me, or, open a PR adding what you want.
-```
+在大多数情况下，应该选择 `base-system` 元包，不过 `base-container` 提供了一个稍微更加精简的安装。
