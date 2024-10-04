@@ -1,6 +1,6 @@
 #!/bin/bash
 title=flatpak
-description="- Includes Flathub repository"
+description="- Includes SJTU Flathub repository"
 status=off
 
 main() {
@@ -9,10 +9,10 @@ main() {
     xbps-install -Sy -R $installRepo -r /mnt flatpak || failureCheck
     echo -e "Flatpak has been installed. \n"
     
-    commandFailure="Adding flatpak repository has failed."
-    echo -e "Adding flathub repo for flatpak... \n"
-    chroot /mnt /bin/bash -c "flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo" || failureCheck
-    echo -e "Flathub repo has been added. \n"
+    commandFailure="Adding SJTU flatpak repository has failed."
+    echo -e "Adding SJTU Flathub repo for flatpak... \n"
+    chroot /mnt /bin/bash -c "flatpak remote-modify flathub --url=https://mirror.sjtu.edu.cn/flathub" || failureCheck
+    echo -e "SJTU Flathub repo has been added. \n"
 
     return 0
 }
