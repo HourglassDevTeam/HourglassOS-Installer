@@ -83,7 +83,7 @@ entry() {
     echo -e "正在创建 .dialogrc... \n"
     dialog --create-rc ~/.dialogrc
     # 我觉得 dialog 默认的蓝色背景有点刺眼，这里将它改成黑色。
-    sed -i -e 's/screen_color = (CYAN,BLUE,ON)/screen_color = (BLACK,BLACK,ON)/g' ~/.dialogrc
+    sed -i -e 's/screen_color = (CYAN,BLUE,ON)/screen_color = (BLACK,BLUE,ON)/g' ~/.dialogrc
     # 顺便调整一些其他设置...
     sed -i -e 's/title_color = (BLUE,WHITE,ON)/title_color = (BLACK,WHITE,ON)/g' ~/.dialogrc
 
@@ -937,9 +937,8 @@ chrootFunction() {
 }
 
 drawDialog() {
-
     commandFailure="显示对话框窗口失败。"
-    dialog --stdout --cancel-label "跳过" --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" "$@"
+    dialog --stdout --cancel-label "跳过" --no-mouse --backtitle "HourglassOS 模块化集成安装器" "$@"
 
 }
 
