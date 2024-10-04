@@ -306,44 +306,7 @@ installOptions() {
     # installType=$(drawDialog --no-cancel --title "Profile Choice" --menu "Choose your installation profile:" 0 0 0 "minimal" " - Installs base system only, dhcpcd included for networking." "desktop" "- Provides extra optional install choices.")
     installType=$(drawDialog --no-cancel --title "安装配置选择" --menu "请选择您的安装配置：" 0 0 0 "minimal" " - 仅安装基础系统，包含用于网络的 dhcpcd。" "desktop" "- 提供额外的可选安装选项。")
     
-    # # Extra install options
-    # if [ "$installType" == "desktop" ]; then
 
-    #     if [ "$muslSelection" == "glibc" ]; then
-    #         graphicsChoice=$(drawDialog --title 'Graphics Drivers' --checklist 'Select graphics drivers: ' 0 0 0 'intel' '' 'off' 'intel-32bit' '' 'off' 'amd' '' 'off' 'amd-32bit' '' 'off' 'nvidia' '- Proprietary driver' 'off' 'nvidia-32bit' '' 'off' 'nvidia-nouveau' '- Nvidia Nouveau driver (experimental)' 'off' 'nvidia-nouveau-32bit' '' 'off')
-    #     elif [ "$muslSelection" == "musl" ]; then
-    #         graphicsChoice=$(drawDialog --title 'Graphics Drivers' --checklist 'Select graphics drivers: ' 0 0 0 'intel' '' 'off' 'amd' '' 'off' 'nvidia-nouveau' '- Nvidia Nouveau driver (experimental)' 'off') 
-    #     fi
-
-    #     if [ ! -z "$graphicsChoice" ]; then
-    #         IFS=" " read -r -a graphicsArray <<< "$graphicsChoice"
-    #     fi
-
-    #     networkChoice=$(drawDialog --title "Networking" --menu "If you are unsure, choose 'NetworkManager'\n\nChoose 'Skip' if you want to skip." 0 0 0 "NetworkManager" "" "dhcpcd" "")
-
-    #     audioChoice=$(drawDialog --title "Audio Server" --menu "If you are unsure, 'pipewire' is recommended.\n\nChoose 'Skip' if you want to skip." 0 0 0 "pipewire" "" "pulseaudio" "")
-
-    #     desktopChoice=$(drawDialog --title "Desktop Environment" --menu "Choose 'Skip' if you want to skip." 0 0 0 "gnome" "" "kde" "" "xfce" "" "sway" "" "swayfx" "" "wayfire" "" "i3" "")
-
-    #     case $desktopChoice in
-    #         sway)
-    #             drawDialog --msgbox "Sway will have to be started manually on login. This can be done by entering 'dbus-run-session sway' after logging in on the new installation." 0 0
-    #             ;;
-
-    #         swayfx)
-    #             drawDialog --msgbox "SwayFX will have to be started manually on login. This can be done by entering 'dbus-run-session sway' after logging in on the new installation." 0 0
-    #             ;;
-
-    #         wayfire)
-    #             drawDialog --msgbox "Wayfire will have to be started manually on login. This can be done by entering 'dbus-run-session wayfire' after logging in on the new installation." 0 0
-    #             ;;
-
-    #         i3)
-    #             if drawDialog --title "" --yesno "Would you like to install lightdm with i3?" 0 0 ; then
-    #                 i3prompt="Yes"
-    #             fi
-    #             ;;
-    #     esac
 
 
     # 额外安装选项
@@ -410,35 +373,6 @@ installOptions() {
 
 confirmInstallationOptions() {  
 
-    # drawDialog --yes-label "Install" --no-label "Exit" --extra-button --extra-label "Restart" --title "Confirm Installation Choices" --yesno "    Selecting 'Install' here will install with the options below. \n\n
-    #     Base System: $baseChoice \n
-    #     Repo mirror: $installRepo \n
-    #     Bootloader: $bootloaderChoice \n
-    #     Kernel: $kernelChoice \n
-    #     Install disk: $diskInput \n
-    #     Encryption: $encryptionPrompt \n
-    #     Wipe disk: $wipePrompt \n
-    #     Number of disk wipe passes: $passInput \n
-    #     Filesystem: $fsChoice \n
-    #     SU Choice: $suChoice \n
-    #     Create swap: $swapPrompt \n
-    #     Swap size: $swapInput \n
-    #     Root partition size: $rootPrompt \n
-    #     Create separate home: $homePrompt \n
-    #     Home size: $homeInput \n
-    #     Hostname: $hostnameInput \n
-    #     Timezone: $timezonePrompt \n
-    #     User: $createUser \n
-    #     Installation profile: $installType \n\n
-    #     $( if [ -n "$modulesChoice" ]; then echo "Enabled modules: ${modulesChoice[@]}"; fi ) \n
-    #     $( if [ $installType == "desktop" ]; then echo "Graphics drivers: $graphicsChoice"; fi ) \n
-    #     $( if [ $installType == "desktop" ]; then echo "Networking: $networkChoice"; fi ) \n
-    #     $( if [ $installType == "desktop" ]; then echo "Audio server: $audioChoice"; fi ) \n
-    #     $( if [ $installType == "desktop" ]; then echo "DE/WM: $desktopChoice"; fi ) \n\n
-    #     $( if [ $desktopChoice == "i3" ]; then echo "Install lightdm with i3: $i3prompt"; fi ) \n
-    # You can choose 'Restart' to go back to the beginning of the installer and change settings." 0 0
-
-
     drawDialog --yes-label "安装" --no-label "退出" --extra-button --extra-label "重新开始" --title "Hourglass OS 安装选项总结" --yesno "    选择 '安装' 将使用以下选项进行安装。 \n\n
     基础系统: $baseChoice \n
     软件源镜像: $installRepo \n
@@ -459,13 +393,13 @@ confirmInstallationOptions() {
     时区: $timezonePrompt \n
     用户: $createUser \n
     安装类型: $installType \n\n
-    $( 如果有启用模块, 则显示 "启用模块: ${modulesChoice[@]}" ) \n
-    $( 如果安装类型为 "桌面", 则显示 "图形驱动: $graphicsChoice" ) \n
-    $( 如果安装类型为 "桌面", 则显示 "网络设置: $networkChoice" ) \n
-    $( 如果安装类型为 "桌面", 则显示 "音频服务器: $audioChoice" ) \n
-    $( 如果安装类型为 "桌面", 则显示 "桌面环境/窗口管理器: $desktopChoice" ) \n\n
-    $( 如果桌面选择为 "i3", 则显示 "安装lightdm与i3: $i3prompt" ) \n
-    您可以选择 '重新开始' 以返回安装的开始阶段并更改设置。" 0 0
+    $( if [ -n "$modulesChoice" ]; then echo "Enabled modules: ${modulesChoice[@]}"; fi ) \n
+    $( if [ $installType == "desktop" ]; then echo "Graphics drivers: $graphicsChoice"; fi ) \n
+    $( if [ $installType == "desktop" ]; then echo "Networking: $networkChoice"; fi ) \n
+    $( if [ $installType == "desktop" ]; then echo "Audio server: $audioChoice"; fi ) \n
+    $( if [ $installType == "desktop" ]; then echo "DE/WM: $desktopChoice"; fi ) \n\n
+    $( if [ $desktopChoice == "i3" ]; then echo "Install lightdm with i3: $i3prompt"; fi ) \n
+    You can choose 'Restart' to go back to the beginning of the installer and change settings." 0 0
 
     case $? in 
         0)
