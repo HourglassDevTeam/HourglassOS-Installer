@@ -537,34 +537,28 @@ install() {
     clear
     echo "开始磁盘分区..."
 
-
-    # VG 是 Volume Group（卷组）的缩写，是逻辑卷管理器（LVM）中的一个核心概念。
-    # LVM（Logical Volume Manager）是一种在 Linux 系统中广泛使用的磁盘管理技术，允许更加灵活地管理物理存储设备。
-    # NOTE 我并不想要逻辑卷。应该更改这个设置。
-
+        # 检查是否存在卷组，如果存在则删除
     deviceVG=$(pvdisplay $diskInput* | grep "VG Name" | while read c1 c2; do echo $c2; done | sed 's/Name//g')
 
     if [ -z $deviceVG ]; then
-        echo -e "未找到现有的逻辑卷卷组 ，不需要执行任何操作... \n"
+        echo -e "未找到现有的逻辑卷卷组，不需要执行任何操作...\n"
     else
         commandFailure="逻辑卷卷组删除失败。"
-        echo -e "找到现有的逻辑卷卷组 ... \n"
-        echo -e "正在清除现有的逻辑卷卷组 ... \n"
-
+        echo -e "找到现有的逻辑卷卷组...\n"
+        echo -e "正在清除现有的逻辑卷卷组...\n"
+        
         vgchange -a n $deviceVG || failureCheck
         vgremove $deviceVG || failureCheck
     fi
 
-
-    # Make EFI boot partition and secondary partition to store lvm
-    # commandFailure="Disk partitioning has failed."
+    # 创建 EFI 启动分区和数据分区
     commandFailure="磁盘分区失败。"
     wipefs -a $diskInput || failureCheck
     parted $diskInput mklabel gpt || failureCheck
     parted $diskInput mkpart primary 0% 500M --script || failureCheck
     parted $diskInput set 1 esp on --script || failureCheck
     parted $diskInput mkpart primary 500M 100% --script || failureCheck
- 
+
     if [[ $diskInput == /dev/nvme* ]] || [[ $diskInput == /dev/mmcblk* ]]; then
         partition1="$diskInput"p1
         partition2="$diskInput"p2
@@ -573,116 +567,81 @@ install() {
         partition2="$diskInput"2
     fi
 
+    # 格式化 EFI 分区
     mkfs.vfat $partition1 || failureCheck
 
     clear2
 
+    # 配置加密，如果选择了加密选项
     if [ "$encryptionPrompt" == "Yes" ]; then
-    echo "配置加密安装的分区..."
+        echo "配置加密安装的分区..."
 
-    # 如果未定义哈希算法、密钥大小或迭代时间，则使用默认值
-    if [ -z "$hash" ]; then
-        hash="sha512"
-    fi
-    if [ -z "$keysize" ]; then
-        keysize="512"
-    fi
-    if [ -z "$itertime" ]; then
-        itertime="10000"
-    fi
-
-    echo -e "${YELLOW}请输入您的加密密码短语。${NC}\n"
-
-    # 根据引导加载程序的选择，执行不同的加密配置
-    case $bootloaderChoice in
-        uki)
-            # 使用 LUKS2 格式并配置加密参数
-            cryptsetup luksFormat --type luks2 --batch-mode --verify-passphrase --hash $hash --key-size $keysize --iter-time $itertime --pbkdf argon2id --use-urandom $partition2 || failureCheck
-            ;;
-        efistub)
-            # 这里我们使用 luks2 格式，不需要兼容性考虑
-            cryptsetup luksFormat --type luks2 --batch-mode --verify-passphrase --hash $hash --key-size $keysize --iter-time $itertime --pbkdf argon2id --use-urandom $partition2 || failureCheck
-            ;;
-        none)
-            # 最佳加密方案，可以在未来为 LUKS 版本和 PBKDF 提供选项
-            cryptsetup luksFormat --type luks2 --batch-mode --verify-passphrase --hash $hash --key-size $keysize --iter-time $itertime --pbkdf argon2id --use-urandom $partition2 || failureCheck
-            ;;
-        grub)
-            # 这里我们需要使用 LUKS1 和 PBKDF2 来保持与 grub 的兼容性
-            # 未来可能替换 grub 的 EFI 二进制文件以支持 LUKS2，但目前仍使用 LUKS1
-            cryptsetup luksFormat --type luks1 --batch-mode --verify-passphrase --hash $hash --key-size $keysize --iter-time $itertime --pbkdf pbkdf2 --use-urandom $partition2 || failureCheck
-            ;;
-    esac
-
-    echo -e "${YELLOW}正在打开新的加密容器...${NC}\n"
-    cryptsetup luksOpen $partition2 void || failureCheck
-    else
-        # 如果没有选择加密，直接创建物理卷和卷组
-        pvcreate $partition2 || failureCheck
-        echo -e "创建卷组... \n"
-        vgcreate void $partition2 || failureCheck
-    fi
-
-    # 如果启用了加密，使用已解密的分区创建卷组
-    if [ "$encryptionPrompt" == "Yes" ]; then
-        echo -e "创建卷组... \n"
-        vgcreate void /dev/mapper/void || failureCheck
-    fi
-
-    echo -e "正在创建卷... \n"
-
-    if [ "$swapPrompt" == "Yes" ]; then
-        echo -e "正在创建交换卷..."
-        lvcreate --name swap -L $swapInput void || failureCheck
-        mkswap /dev/void/swap || failureCheck
-    fi
-
-    if [ "$rootPrompt" == "full" ]; then
-        echo -e "正在创建全盘根卷..."
-        lvcreate --name root -l 100%FREE void || failureCheck
-    else
-        echo -e "正在创建 $rootPrompt 大小的根卷..."
-        lvcreate --name root -L $rootPrompt void || failureCheck
-    fi
-
-    if [ "$fsChoice" == "ext4" ]; then
-        mkfs.ext4 /dev/void/root || failureCheck
-    elif [ "$fsChoice" == "xfs" ]; then
-        mkfs.xfs /dev/void/root || failureCheck
-    fi
-
-
-    if [ "$separateHomePossible" == "1" ]; then
-        if [ "$homePrompt" == "Yes" ]; then
-            if [ "$homeInput" == "full" ]; then
-                echo -e "正在创建全盘家目录卷..."
-                lvcreate --name home -l 100%FREE void || failureCheck
-            else
-                echo -e "正在创建 $homeInput 大小的家目录卷..."
-                lvcreate --name home -L $homeInput void || failureCheck
-            fi
-
-            if [ "$fsChoice" == "ext4" ]; then
-                echo -e "正在格式化家目录卷为 ext4..."
-                mkfs.ext4 /dev/void/home || failureCheck
-            elif [ "$fsChoice" == "xfs" ]; then
-                echo -e "正在格式化家目录卷为 xfs..."
-                mkfs.xfs /dev/void/home || failureCheck
-            fi
-
+        # 使用默认或指定的加密参数
+        if [ -z "$hash" ]; then
+            hash="sha512"
         fi
+        if [ -z "$keysize" ]; then
+            keysize="512"
+        fi
+        if [ -z "$itertime" ]; then
+            itertime="10000"
+        fi
+
+        echo -e "${YELLOW}请输入您的加密密码短语。${NC}\n"
+
+        # 配置加密，根据引导加载程序选择不同的加密方式
+        case $bootloaderChoice in
+            uki|efistub|none)
+                cryptsetup luksFormat --type luks2 --batch-mode --verify-passphrase --hash $hash --key-size $keysize --iter-time $itertime --pbkdf argon2id --use-urandom $partition2 || failureCheck
+                cryptsetup luksOpen --type luks2 $partition2 cryptpart || failureCheck
+                ;;
+            grub)
+                cryptsetup luksFormat --type luks1 --batch-mode --verify-passphrase --hash $hash --key-size $keysize --iter-time $itertime --pbkdf pbkdf2 --use-urandom $partition2 || failureCheck
+                cryptsetup luksOpen --type luks1 $partition2 cryptpart || failureCheck
+                ;;
+        esac
+
+        partition2="/dev/mapper/cryptpart"  # 加密后直接使用加密容器
     fi
 
+    # 如果未选择加密，直接使用物理分区
+    if [ "$encryptionPrompt" != "Yes" ]; then
+        echo -e "直接使用分区 $partition2 ... \n"
+    fi
 
-    echo -e "正在挂载分区... \n"
+    # 格式化根分区
+    if [ "$fsChoice" == "ext4" ]; then
+        mkfs.ext4 $partition2 || failureCheck
+    elif [ "$fsChoice" == "xfs" ]; then
+        mkfs.xfs $partition2 || failureCheck
+    fi
+
+    # 如果需要交换分区，创建并启用
+    if [ "$swapPrompt" == "Yes" ]; then
+        echo -e "正在创建交换分区..."
+        fallocate -l $swapInput /swapfile || failureCheck
+        chmod 600 /swapfile
+        mkswap /swapfile || failureCheck
+        swapon /swapfile || failureCheck
+    fi
+
+    # 如果需要单独的 /home 分区，可以在这里创建
+    if [ "$separateHomePossible" == "1" ] && [ "$homePrompt" == "Yes" ]; then
+        echo -e "正在创建 /home 分区..."
+        parted $diskInput mkpart primary 100M 100% --script || failureCheck
+        mkfs.$fsChoice $partition2 || failureCheck
+    fi
+
+    echo -e "正在挂载分区...\n"
     commandFailure="挂载分区失败。"
-    mount /dev/void/root /mnt || failureCheck
+    mount $partition2 /mnt || failureCheck  # 挂载根分区
     for dir in dev proc sys run; do 
         mkdir -p /mnt/$dir
         mount --rbind /$dir /mnt/$dir
         mount --make-rslave /mnt/$dir
     done || failureCheck
 
+    # 根据引导加载程序选择挂载 EFI 分区
     case $bootloaderChoice in
         uki)
             mkdir -p /mnt/boot/efi || failureCheck
@@ -694,63 +653,56 @@ install() {
             ;;
         grub)
             mkdir -p /mnt/boot/efi || failureCheck
-            mount $partition1 /mnt/boot/efi
+            mount $partition1 /mnt/boot/efi || failureCheck
             ;;
-    esac # esac: 结束 case 语句。
+    esac
 
-
-
-    echo -e "正在复制密钥... \n"
+    # 复制 XBPS 密钥
+    echo -e "正在复制密钥...\n"
     commandFailure="复制 XBPS 密钥失败。"
     mkdir -p /mnt/var/db/xbps/keys || failureCheck
     cp /var/db/xbps/keys/* /mnt/var/db/xbps/keys || failureCheck
 
-    echo -e "正在安装基础系统... \n"
+    # 安装基础系统
+    echo -e "正在安装基础系统...\n"
     commandFailure="基础系统安装失败。"
-
-    
 
     case $baseChoice in
         Custom)
             XBPS_ARCH=$ARCH xbps-install -Sy -R $installRepo -r /mnt $basesystem || failureCheck
             ;;
         base-container)
-            XBPS_ARCH=$ARCH xbps-install -Sy -R $installRepo -r /mnt base-container $kernelChoice dosfstools ncurses libgcc bash file less man-pages mdocml pciutils usbutils dhcpcd kbd iproute2 iputils ethtool kmod acpid eudev lvm2 void-artwork || failureCheck
+            XBPS_ARCH=$ARCH xbps-install -Sy -R $installRepo -r /mnt base-container $kernelChoice dosfstools ncurses libgcc bash file less man-pages mdocml pciutils usbutils dhcpcd kbd iproute2 iputils ethtool kmod acpid eudev void-artwork || failureCheck
 
             case $fsChoice in
-
                 xfs)
                     xbps-install -Sy -R $installRepo -r /mnt xfsprogs || failureCheck
                     ;;
-
                 ext4)
                     xbps-install -Sy -R $installRepo -r /mnt e2fsprogs || failureCheck
                     ;;
-
                 *)
                     failureCheck
                     ;;
-
-            esac            
+            esac
             ;;
         base-system)
-            XBPS_ARCH=$ARCH xbps-install -Sy -R $installRepo -r /mnt base-system lvm2 || failureCheck
+            XBPS_ARCH=$ARCH xbps-install -Sy -R $installRepo -r /mnt base-system || failureCheck  # 删除 lvm2
 
-            # Ignore some packages provided by base-system and remove them to provide a choice.
+            # 如果选择的 kernel 并非默认的 linux，处理 kernel 的替换
             if [ $kernelChoice != "linux" ] && [ $kernelChoice != "Custom" ]; then
                 echo "ignorepkg=linux" >> /mnt/etc/xbps.d/ignore.conf || failureCheck
-
                 xbps-install -Sy -R $installRepo -r /mnt $kernelChoice || failureCheck
-
                 xbps-remove -ROoy -r /mnt linux || failureCheck
             fi
 
+            # 处理 su 工具的选择
             if [ $suChoice != "sudo" ]; then
                 echo "ignorepkg=sudo" >> /mnt/etc/xbps.d/ignore.conf || failureCheck
-
                 xbps-remove -ROoy -r /mnt sudo || failureCheck
             fi
 
+            # 如果是桌面安装并且不需要 wifi-firmware，移除相关包
             if [ "$installType" == "desktop" ] && [[ ! ${modulesChoice[@]} =~ "wifi-firmware" ]]; then
                 echo "ignorepkg=wifi-firmware" >> /mnt/etc/xbps.d/ignore.conf || failureCheck
                 echo "ignorepkg=iw" >> /mnt/etc/xbps.d/ignore.conf || failureCheck
@@ -826,24 +778,24 @@ install() {
             ;;
     esac
 
-
-    echo "/dev/void/root  /     $fsChoice     defaults              0       0" >> /mnt/etc/fstab || failureCheck
+    # 修改 fstab，使用直接分区路径
+    echo "$partition2  /     $fsChoice     defaults              0       0" >> /mnt/etc/fstab || failureCheck
 
     if [ "$swapPrompt" == "Yes" ]; then
-        echo "/dev/void/swap  swap  swap    defaults              0       0" >> /mnt/etc/fstab || failureCheck
+        echo "$partition2  swap  swap    defaults              0       0" >> /mnt/etc/fstab || failureCheck
     fi
 
     if [ "$homePrompt" == "Yes" ] && [ "$separateHomePossible" == "1" ]; then
-        echo "/dev/void/home  /home $fsChoice     defaults              0       0" >> /mnt/etc/fstab || failureCheck
+        echo "$partition2  /home $fsChoice     defaults              0       0" >> /mnt/etc/fstab || failureCheck
     fi
 
+    # 配置引导加载程序
     case $bootloaderChoice in
         efistub)
             echo "正在为 efistub 引导配置 dracut..."
             commandFailure="Dracut 配置失败。"
             echo 'hostonly="yes"' >> /mnt/etc/dracut.conf.d/30.conf || failureCheck
             echo 'use_fstab="yes"' >> /mnt/etc/dracut.conf.d/30.conf || failureCheck
-
             echo 'install_items+=" /etc/crypttab "' >> /mnt/etc/dracut.conf.d/30.conf || failureCheck
             echo 'add_drivers+=" vfat nls_cp437 nls_iso8859_1 "' >> /mnt/etc/dracut.conf.d/30.conf || failureCheck
 
@@ -861,11 +813,11 @@ install() {
             echo DISK="$diskInput" >> /mnt/etc/default/efibootmgr-kernel-hook || failureCheck
             echo 'PART="1"' >> /mnt/etc/default/efibootmgr-kernel-hook || failureCheck
 
-            # An empty BOOTX64.EFI file needs to exist at the default/fallback efi location to stop some motherboards from nuking our efistub boot entry
+            # 创建空的 BOOTX64.EFI 文件
             mkdir -p /mnt/boot/EFI/BOOT || failureCheck
             touch /mnt/boot/EFI/BOOT/BOOTX64.EFI || failureCheck
 
-            echo 'OPTIONS="loglevel=4 rd.lvm.vg=void"' >> /mnt/etc/default/efibootmgr-kernel-hook || failureCheck
+            echo 'OPTIONS="loglevel=4"' >> /mnt/etc/default/efibootmgr-kernel-hook || failureCheck
 
             if [ "$acpi" == "false" ]; then
                 commandFailure="Disabling ACPI has failed."
@@ -878,7 +830,7 @@ install() {
                 commandFailure="配置 grub 以支持全盘加密失败。"
                 echo -e "正在为全盘加密配置 grub... \n"
                 partVar=$(blkid -o value -s UUID $partition2)
-                sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4"/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4 rd.lvm.vg=void rd.luks.uuid='$partVar'"/g' /mnt/etc/default/grub || failureCheck
+                sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4"/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4 rd.luks.uuid='$partVar'"/g' /mnt/etc/default/grub || failureCheck
                 echo "GRUB_ENABLE_CRYPTODISK=y" >> /mnt/etc/default/grub || failureCheck
             fi
 
@@ -893,15 +845,15 @@ install() {
             echo -e "正在配置内核参数... \n"
             if [ "$encryptionPrompt" == "Yes" ]; then
                 partVar=$(blkid -o value -s UUID $partition2)
-                echo "rd.luks.uuid=$partVar root=/dev/void/root rootfstype=$fsChoice rw loglevel=4" >> /mnt/root/kernelparams || failureCheck
+                echo "rd.luks.uuid=$partVar root=$partition2 rootfstype=$fsChoice rw loglevel=4" >> /mnt/root/kernelparams || failureCheck
             else
-                echo "rd.lvm.vg=void root=/dev/void/root rootfstype=$fsChoice rw loglevel=4" >> /mnt/root/kernelparams || failureCheck
+                echo "root=$partition2 rootfstype=$fsChoice rw loglevel=4" >> /mnt/root/kernelparams || failureCheck
             fi
 
             if [ "$acpi" == "false" ]; then
                 commandFailure="Disabling ACPI has failed."
                 echo -e "Disabling ACPI... \n"
-                sed -i -e 's/loglevel=4/loglevel=4 acpi=off' /mnt/root/kernelparams || failureCheck
+                sed -i -e 's/loglevel=4/loglevel=4 acpi=off/g' /mnt/root/kernelparams || failureCheck
             fi
             ;;
     esac
@@ -917,211 +869,169 @@ install() {
     commandFailure="主机名配置失败。"
     echo -e "正在设置主机名... \n"
     echo $hostnameInput > /mnt/etc/hostname || failureCheck
-
-
+    
     if [ "$installType" == "minimal" ]; then
         chrootFunction
-    elif [ "$installType" == "desktop" ]; then
+    elif [ "$installType" == "desktop" ];then
 
         commandFailure="图形驱动程序安装失败。"
 
+        # 刷新仓库配置一次，避免在每个 case 中重复运行
+        echo -e "正在刷新仓库配置... \n"
+        xmirror -s "$installRepo" -r /mnt || failureCheck
+
+        # 统一配置 multilib 和 nonfree 仓库（仅在需要时）
+        if [[ "${graphicsArray[@]}" =~ "32bit" ]]; then
+            xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
+            if [[ "${graphicsArray[@]}" =~ "nvidia" ]]; then
+                xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib-nonfree || failureCheck
+            fi
+        fi
+
+        if [[ "${graphicsArray[@]}" =~ "nvidia" ]]; then
+            xbps-install -Sy -R $installRepo -r /mnt void-repo-nonfree || failureCheck
+        fi
+
         for i in "${graphicsArray[@]}"
         do
-
             case $i in
-
                 amd)
                     echo -e "正在安装 AMD 图形驱动... \n"
                     xbps-install -Sy -R $installRepo -r /mnt mesa-dri vulkan-loader mesa-vulkan-radeon mesa-vaapi mesa-vdpau || failureCheck
                     echo -e "AMD 图形驱动安装完成。 \n"
                     ;;
-
                 amd-32bit)
                     echo -e "正在安装 32 位 AMD 图形驱动... \n"
-                    xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
-                    xmirror -s "$installRepo" -r /mnt || failureCheck
                     xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit || failureCheck
                     echo -e "32 位 AMD 图形驱动安装完成。 \n"
                     ;;
-
                 nvidia)
                     echo -e "正在安装 NVIDIA 图形驱动... \n"
-                    xbps-install -Sy -R $installRepo -r /mnt void-repo-nonfree || failureCheck
-                    xmirror -s "$installRepo" -r /mnt || failureCheck
                     xbps-install -Sy -R $installRepo -r /mnt nvidia || failureCheck
-
-                    # 为 Wayland 合成器启用模式设置
                     if [ "$bootloaderChoice" == "grub" ]; then
                         sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4/GRUB_CMDLINE_DEFAULT="loglevel=4 nvidia_drm.modeset=1/g' /mnt/etc/default/grub || failureCheck 
                     elif [ "$bootloaderChoice" == "efistub" ]; then
                         sed -i -e 's/OPTIONS="loglevel=4/OPTIONS="loglevel=4 nvidia_drm.modeset=1/g' /mnt/etc/default/efibootmgr-kernel-hook || failureCheck
                     fi
-
                     echo -e "NVIDIA 图形驱动安装完成。 \n"
                     ;;
-
                 nvidia-32bit)
                     echo -e "正在安装 32 位 NVIDIA 图形驱动... \n"
-                    xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib-nonfree void-repo-multilib || failureCheck
-                    xmirror -s "$installRepo" -r /mnt || failureCheck
                     xbps-install -Sy -R $installRepo -r /mnt nvidia-libs-32bit || failureCheck
                     echo -e "32 位 NVIDIA 图形驱动安装完成。 \n"
                     ;;
-
                 intel)
                     echo -e "正在安装 Intel 图形驱动... \n"
                     xbps-install -Sy -R $installRepo -r /mnt mesa-dri vulkan-loader mesa-vulkan-intel intel-video-accel || failureCheck
                     echo -e "Intel 图形驱动安装完成。 \n"
                     ;;
-
                 intel-32bit)
                     echo -e "正在安装 32 位 Intel 图形驱动... \n"
-                    xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
-                    xmirror -s "$installRepo" -r /mnt || failureCheck
                     xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit || failureCheck
                     echo -e "32 位 Intel 图形驱动安装完成。 \n"
                     ;;
-
                 nvidia-nouveau)
                     echo -e "正在安装 Nouveau 图形驱动... \n"
                     xbps-install -Sy -R $installRepo -r /mnt mesa-dri mesa-nouveau-dri || failureCheck
                     echo -e "Nouveau 图形驱动安装完成。 \n"
                     ;;
-
                 nvidia-nouveau-32bit)
                     echo -e "正在安装 32 位 Nouveau 图形驱动... \n"
-                    xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
-                    xmirror -s "$installRepo" -r /mnt || failureCheck
-                    xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit mesa-nouveau-dri-32bit || failureCheck
+                    xbps-install -Sy -R $installRepo -r /mnt mesa-dri-32bit mesa-nouveau-dri-32bit || failureCheck
                     echo -e "32 位 Nouveau 图形驱动安装完成。 \n"
                     ;;
-
                 *)
                     echo -e "继续安装，没有图形驱动... \n"
                     ;;
-
             esac
-
         done
+    fi
 
-        if [ "$networkChoice" == "NetworkManager" ]; then
-            commandFailure="NetworkManager 安装失败。"
-            echo -e "正在安装 NetworkManager... \n"
-            xbps-install -Sy -R $installRepo -r /mnt NetworkManager || failureCheck
-            chroot /mnt /bin/bash -c "ln -s /etc/sv/NetworkManager /var/service" || failureCheck
-            echo -e "NetworkManager 已安装。 \n"
-        elif [ "$networkChoice" == "dhcpcd" ]; then
-            chroot /mnt /bin/bash -c "ln -s /etc/sv/dhcpcd /var/service" || failureCheck
-        fi
+    if [ "$networkChoice" == "NetworkManager" ]; then
+        commandFailure="NetworkManager 安装失败。"
+        echo -e "正在安装 NetworkManager... \n"
+        xbps-install -Sy -R $installRepo -r /mnt NetworkManager || failureCheck
+        chroot /mnt /bin/bash -c "ln -s /etc/sv/NetworkManager /var/service" || failureCheck
+        echo -e "NetworkManager 已安装。 \n"
+    elif [ "$networkChoice" == "dhcpcd" ]; then
+        commandFailure="dhcpcd 安装失败。"
+        echo -e "正在安装 dhcpcd... \n"
+        xbps-install -Sy -R $installRepo -r /mnt dhcpcd || failureCheck
+        chroot /mnt /bin/bash -c "ln -s /etc/sv/dhcpcd /var/service" || failureCheck
+        echo -e "dhcpcd 已安装。 \n"
+    fi
 
-        commandFailure="音频服务器安装失败。"
-        if [ "$audioChoice" == "pipewire" ]; then
-            echo -e "正在安装 Pipewire... \n"
-            xbps-install -Sy -R $installRepo -r /mnt pipewire alsa-pipewire wireplumber || failureCheck
-            mkdir -p /mnt/etc/alsa/conf.d || failureCheck
-            mkdir -p /mnt/etc/pipewire/pipewire.conf.d || failureCheck
+    commandFailure="音频服务器安装失败。"
+    if [ "$audioChoice" == "pipewire" ]; then
+        echo -e "正在安装 Pipewire... \n"
+        xbps-install -Sy -R $installRepo -r /mnt pipewire alsa-pipewire wireplumber || failureCheck
+        mkdir -p /mnt/etc/alsa/conf.d || failureCheck
+        mkdir -p /mnt/etc/pipewire/pipewire.conf.d || failureCheck
 
-            # 现在需要以合适的顺序启动 pipewire 及其会话管理器 'wireplumber'，以实现系统范围内的理想结果。
-            echo 'context.exec = [ { path = "/usr/bin/wireplumber" args = "" } ]' > /mnt/etc/pipewire/pipewire.conf.d/10-wireplumber.conf || failureCheck
-
-            echo -e "Pipewire 已安装。 \n"
-        elif [ "$audioChoice" == "pulseaudio" ]; then
-            echo -e "正在安装 Pulseaudio... \n"
-            xbps-install -Sy -R $installRepo -r /mnt pulseaudio alsa-plugins-pulseaudio || failureCheck
-            echo -e "Pulseaudio 已安装。 \n"
-        fi
-
-        commandFailure="图形界面安装失败。"
+        # 现在需要以合适的顺序启动 pipewire 及其会话管理器 'wireplumber'，以实现系统范围内的理想结果。
+        echo 'context.exec = [ { path = "/usr/bin/wireplumber" args = "" } ]' > /mnt/etc/pipewire/pipewire.conf.d/10-wireplumber.conf || failureCheck
+        echo -e "Pipewire 已安装。 \n"
+    elif [ "$audioChoice" == "pulseaudio" ]; then
+        echo -e "正在安装 Pulseaudio... \n"
+        xbps-install -Sy -R $installRepo -r /mnt pulseaudio alsa-plugins-pulseaudio || failureCheck
+        echo -e "Pulseaudio 已安装。 \n"
+    fi
 
 
-        case $desktopChoice in
 
-            gnome)
-                echo -e "Installing Gnome desktop environment... \n"
-                xbps-install -Sy -R $installRepo -r /mnt gnome-core gnome-disk-utility gnome-console gnome-tweaks gnome-browser-connector gnome-text-editor xdg-user-dirs xorg-minimal xorg-video-drivers || failureCheck
-                chroot /mnt /bin/bash -c "ln -s /etc/sv/gdm /var/service" || failureCheck
-                echo -e "Gnome has been installed. \n"
-                ;;
+    # Define a helper function for installing services
+    install_service() {
+        service_name=$1
+        chroot /mnt /bin/bash -c "ln -s /etc/sv/$service_name /var/service" || failureCheck
+    }
 
-            kde)
-                echo -e "Installing KDE desktop environment... \n"
-                xbps-install -Sy -R $installRepo -r /mnt kde5 kde5-baseapps xdg-user-dirs xorg-minimal xorg-video-drivers || failureCheck
-                chroot /mnt /bin/bash -c "ln -s /etc/sv/sddm /var/service" || failureCheck
-                echo -e "KDE has been installed. \n"
-                ;;
+    # Define desktop installation logic
+    install_desktop_environment() {
+        echo -e "Installing $1 desktop environment... \n"
+        xbps-install -Sy -R $installRepo -r /mnt $2 || failureCheck
+        install_service $3
+        echo -e "$1 has been installed. \n"
+    }
 
-            xfce)
-                echo -e "Installing XFCE desktop environment... \n"
-                xbps-install -Sy -R $installRepo -r /mnt xfce4 lightdm lightdm-gtk3-greeter xorg-minimal xdg-user-dirs xorg-fonts xorg-video-drivers || failureCheck
+    case $desktopChoice in
+        gnome)
+            install_desktop_environment "Gnome" "gnome-core gnome-disk-utility gnome-console gnome-tweaks gnome-browser-connector gnome-text-editor xdg-user-dirs xorg-minimal xorg-video-drivers" "gdm"
+            ;;
+        
+        kde)
+            install_desktop_environment "KDE" "kde5 kde5-baseapps xdg-user-dirs xorg-minimal xorg-video-drivers" "sddm"
+            ;;
+        
+        xfce)
+            install_desktop_environment "XFCE" "xfce4 lightdm lightdm-gtk3-greeter xorg-minimal xdg-user-dirs xorg-fonts xorg-video-drivers" "lightdm"
+            ;;
 
-                if [ "$networkChoice" == "NetworkManager" ]; then
-                    xbps-install -Sy -R $installRepo -r /mnt network-manager-applet || failureCheck
-                fi
+        sway)
+            install_desktop_environment "Sway" "sway elogind polkit polkit-elogind foot xorg-fonts" "elogind && ln -s /etc/sv/polkitd /var/service"
+            ;;
 
-                chroot /mnt /bin/bash -c "ln -s /etc/sv/lightdm /var/service" || failureCheck
-                echo -e "XFCE has been installed. \n"
-                ;;
+        swayfx)
+            install_desktop_environment "SwayFX" "swayfx elogind polkit polkit-elogind foot xorg-fonts" "elogind && ln -s /etc/sv/polkitd /var/service"
+            ;;
 
-            sway)
-                echo -e "Installing Sway window manager... \n"
-                xbps-install -Sy -R $installRepo -r /mnt sway elogind polkit polkit-elogind foot xorg-fonts || failureCheck
+        wayfire)
+            install_desktop_environment "Wayfire" "wayfire elogind polkit polkit-elogind foot xorg-fonts" "elogind && ln -s /etc/sv/polkitd /var/service"
+            ;;
 
-                if [ "$networkChoice" == "NetworkManager" ]; then
-                    xbps-install -Sy -R $installRepo -r /mnt network-manager-applet || failureCheck
-                fi
+        i3)
+            install_desktop_environment "i3wm" "xorg-minimal xinit xterm i3 xorg-fonts xorg-video-drivers" ""
+            if [ "$i3prompt" == "Yes" ]; then
+                echo -e "Installing lightdm for i3... \n"
+                xbps-install -Sy -R $installRepo -r /mnt lightdm lightdm-gtk3-greeter || failureCheck
+                install_service "lightdm"
+                echo "lightdm has been installed."
+            fi
+            ;;
 
-                chroot /mnt /bin/bash -c "ln -s /etc/sv/elogind /var/service && ln -s /etc/sv/polkitd /var/service" || failureCheck
-                echo -e "Sway has been installed. \n"
-                ;;
-
-            swayfx)
-                echo -e "Installing SwayFX window manager... \n"
-                xbps-install -Sy -R $installRepo -r /mnt swayfx elogind polkit polkit-elogind foot xorg-fonts || failureCheck
-
-                if [ "$networkChoice" == "NetworkManager" ]; then
-                    xbps-install -Sy -R $installRepo -r /mnt network-manager-applet || failureCheck
-                fi
-
-                chroot /mnt /bin/bash -c "ln -s /etc/sv/elogind /var/service && ln -s /etc/sv/polkitd /var/service" || failureCheck
-                echo -e "SwayFX has been installed. \n"
-                ;;
-
-            wayfire)
-                echo -e "Installing Wayfire window manager... \n"
-                xbps-install -Sy -R $installRepo -r /mnt wayfire elogind polkit polkit-elogind foot xorg-fonts || failureCheck
-
-                if [ "$networkChoice" == "NetworkManager" ]; then
-                    xbps-install -Sy -R $installRepo -r /mnt network-manager-applet || failureCheck
-                fi
-
-                # To ensure a consistent experience, I would rather provide foot with all wayland compositors. 
-                # Modifying the default terminal setting so the user doesn't get stuck without a terminal is done post user setup by systemchroot.sh
-                chroot /mnt /bin/bash -c "ln -s /etc/sv/elogind /var/service && ln -s /etc/sv/polkitd /var/service" || failureCheck
-                echo -e "Wayfire has been installed. \n"
-                ;;
-
-            i3)
-                echo -e "Installing i3wm... \n"
-                xbps-install -Sy -R $installRepo -r /mnt xorg-minimal xinit xterm i3 xorg-fonts xorg-video-drivers || failureCheck
-
-                if [ "$networkChoice" == "NetworkManager" ]; then
-                    xbps-install -Sy -R $installRepo -r /mnt network-manager-applet || failureCheck
-                fi
-
-                echo -e "i3wm has been installed. \n"
-                if [ "$i3prompt" == "Yes" ]; then
-                    echo -e "Installing lightdm... \n"
-                    xbps-install -Sy -R $installRepo -r /mnt lightdm lightdm-gtk3-greeter || failureCheck
-                    chroot /mnt /bin/bash -c "ln -s /etc/sv/lightdm /var/service" || failureCheck
-                    echo "lightdm has been installed."
-                fi
-                ;;
-
-            *)
-                echo -e "Continuing without GUI... \n"
-                ;;
-
-        esac
+        *)
+            echo -e "Continuing without GUI... \n"
+            ;;
+    esac
 
         clear
 
@@ -1137,116 +1047,69 @@ install() {
 
 }
 
+
 chrootFunction() {
 
     commandFailure="系统 chroot 失败。"
-    cp /etc/resolv.conf /mnt/etc/resolv.conf || failureCheck
     
-    syschrootVarPairs=("bootloaderChoice $bootloaderChoice" \
-    "suChoice $suChoice" \
-    "timezonePrompt $timezonePrompt" \
-    "encryptionPrompt $encryptionPrompt" \
-    "diskInput $diskInput" \
-    "createUser $createUser" \
-    "desktopChoice $desktopChoice")
+    # 复制 resolv.conf 用于 chroot 后的网络连接
+    cp /etc/resolv.conf /mnt/etc/resolv.conf || failureCheck
 
-    for i in "${syschrootVarPairs[@]}"
-    do
-        set -- $i || failureCheck
-        echo "$1='$2'" >> /mnt/tmp/installerOptions || failureCheck
+    # 将需要传递的变量键值对写入到 /mnt/tmp/installerOptions 文件
+    syschrootVarPairs=(
+        "bootloaderChoice=$bootloaderChoice"
+        "suChoice=$suChoice"
+        "timezonePrompt=$timezonePrompt"
+        "encryptionPrompt=$encryptionPrompt"
+        "diskInput=$diskInput"
+        "createUser=$createUser"
+        "desktopChoice=$desktopChoice"
+    )
+
+    for pair in "${syschrootVarPairs[@]}"; do
+        printf "%s\n" "$pair" >> /mnt/tmp/installerOptions || failureCheck
     done
 
-    cp -f $(pwd)/systemchroot.sh /mnt/tmp/systemchroot.sh || failureCheck
+    # 将 systemchroot.sh 脚本复制到 chroot 环境中并执行
+    cp -f "$(pwd)/systemchroot.sh" /mnt/tmp/systemchroot.sh || failureCheck
     chroot /mnt /bin/bash -c "/bin/bash /tmp/systemchroot.sh" || failureCheck
 
+    # 调用 postInstall 函数进行后续操作
     postInstall
-
 }
-
-
-# drawDialog() {
-
-#     commandFailure="Displaying dialog window has failed."
-#     dialog --stdout --cancel-label "Skip" --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" "$@"
-
-# }
 
 drawDialog() {
-
     commandFailure="显示对话框窗口失败。"
-    dialog --stdout --cancel-label "跳过" --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" "$@"
-
+    dialog --stdout --cancel-label "跳过" --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" "$@" || failureCheck
 }
-
-# checkModule() {
-
-#     # We need to make sure a few variables at minimum exist before the installer should accept it.
-#     # Past this, I'm going to leave verifying correctness to the author of the module.
-#     if grep "title="*"" "modules/$i" && ( grep "status=on" "modules/$i" || grep "status=off" "modules/$i" ) && ( grep "description="*"" "modules/$i" ) && ( grep "main()" "modules/$i" ); then
-#         return 0
-#     else
-#         # Skip found module file if its contents do not comply.
-#         return 1
-#     fi
-
-# }
 
 checkModule() {
-
-    # 我们需要确保至少存在一些变量，安装程序才能接受这个模块。
-    # 除此之外，模块的正确性验证留给模块的作者来处理。
-    if grep "title="*"" "modules/$i" && ( grep "status=on" "modules/$i" || grep "status=off" "modules/$i" ) && ( grep "description="*"" "modules/$i" ) && ( grep "main()" "modules/$i" ); then
+    # 验证模块的必备字段
+    if grep -q "title=" "modules/$i" && (grep -q "status=on" "modules/$i" || grep -q "status=off" "modules/$i") && grep -q "description=" "modules/$i" && grep -q "main()" "modules/$i"; then
         return 0
     else
-        # 如果模块文件的内容不符合要求，则跳过该模块。
+        echo -e "模块 $i 缺少必要字段，跳过。"
         return 1
     fi
-
 }
 
-
-# failureCheck() {
-
-#     echo -e "${RED}$commandFailure${NC}"
-#     echo "Installation will not proceed."
-#     exit 1
-
-# }
-
 failureCheck() {
-
     echo -e "${RED}$commandFailure${NC}"
     echo "安装将不会继续。"
     exit 1
-
 }
 
-# diskCalculator() {
-
-#     diskOperand=$(echo $sizeInput | sed 's/G//g')
-#     diskFloat=$(echo $diskFloat - $diskOperand | bc)
-#     diskAvailable=$(echo $diskFloat - 0.5 | bc)
-#     diskAvailable+="G"
-
-#     if [ "$diskFloat" -lt 0 ]; then
-#         clear
-#         echo -e "${RED}Used disk space cannot exceed the maximum capacity of the chosen disk. Have you over-provisioned your disk? ${NC}\n"
-#         read -p "Press Enter to start disk configuration again." </dev/tty
-#         diskConfiguration
-#     fi
-
-#     return 0
-
-# }
-
 diskCalculator() {
-
     diskOperand=$(echo $sizeInput | sed 's/G//g')
-    diskFloat=$(echo $diskFloat - $diskOperand | bc)
-    diskAvailable=$(echo $diskFloat - 0.5 | bc)
+    if [[ -z $diskOperand ]]; then
+        echo "无效的磁盘大小输入: $sizeInput"
+        return 1
+    fi
+    diskFloat=$(echo "$diskFloat - $diskOperand" | bc)
+    diskAvailable=$(echo "$diskFloat - 0.5" | bc)
     diskAvailable+="G"
 
-    if [ "$diskFloat" -lt 0 ]; then
+    if (( $(echo "$diskFloat < 0" | bc -l) )); then
         clear
         echo -e "${RED}使用的磁盘空间不能超过所选磁盘的最大容量。您的磁盘是否超额分配了？${NC}\n"
         read -p "按回车键重新开始磁盘配置。" </dev/tty
@@ -1254,81 +1117,36 @@ diskCalculator() {
     fi
 
     return 0
-
 }
 
-
-# partitionerOutput() {
-
-#     echo -e "Disk: $diskInput"
-#     echo -e "Disk size: $diskSize"
-#     echo -e "Available disk space: $diskAvailable \n"
-
-#     return 0
-
-# }
-
-
 partitionerOutput() {
-
     echo -e "磁盘: $diskInput"
     echo -e "磁盘大小: $diskSize"
     echo -e "可用磁盘空间: $diskAvailable \n"
 
     return 0
-
 }
 
-# postInstall() {
-
-#     if [ -z "$modulesChoice" ]; then
-#         clear
-
-#         echo -e "${GREEN}Installation complete.${NC} \n"
-#         echo -e "Please remove installation media and reboot. \n"
-#         exit 0
-#     else
-#         commandFailure="Executing module has failed."
-#         for i in "${modulesChoice[@]}"
-#         do
-#             # Source and execute each module
-#             . "modules/$i"  || failureCheck
-#             main
-#         done
-
-#         clear
-
-#         echo -e "${GREEN}Installation complete.${NC} \n"
-#         echo -e "Please remove installation media and reboot. \n"
-#         exit 0
-#     fi
-
-# }
-
 postInstall() {
-
     if [ -z "$modulesChoice" ]; then
         clear
-
         echo -e "${GREEN}安装完成。${NC} \n"
         echo -e "请移除安装介质并重启。 \n"
         exit 0
     else
         commandFailure="执行模块失败。"
-        for i in "${modulesChoice[@]}"
-        do
-            # 加载并执行每个模块
-            . "modules/$i"  || failureCheck
-            main
+        for i in "${modulesChoice[@]}"; do
+            if . "modules/$i" && main; then
+                echo "模块 $i 执行成功。"
+            else
+                echo "模块 $i 执行失败。"
+                failureCheck
+            fi
         done
 
         clear
-
         echo -e "${GREEN}安装完成。${NC} \n"
         echo -e "请移除安装介质并重启。 \n"
         exit 0
     fi
-
 }
-
-entry
