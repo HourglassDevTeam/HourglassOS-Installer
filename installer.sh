@@ -205,14 +205,6 @@ installOptions() {
     # Most of this timezone section is taken from the normal Void installer.
     areas=(Africa America Antarctica Arctic Asia Atlantic Australia Europe Indian Pacific)
 
-    # if area=$(IFS='|'; drawDialog --title "Set Timezone" --menu "" 0 0 0 $(printf '%s||' "${areas[@]}")) ; then
-    #     read -a locations -d '\n' < <(find /usr/share/zoneinfo/$area -type f -printf '%P\n' | sort) || echo "Disregard exit code"
-    #     location=$(IFS='|'; drawDialog --no-cancel --title "Set Timezone" --menu "" 0 0 0 $(printf '%s||' "${locations[@]//_/ }"))
-    # fi
-
-    # location=$(echo $location | tr ' ' '_')
-    # timezonePrompt="$area/$location"
-
     # 使用 drawDialog 显示一个对话框，供用户选择一个大区域（例如：美洲、亚洲等）。
     # 这个 if 语句执行时，用户可以从显示的菜单中选择他们所在的区域。如果选择成功，变量 area 将保存所选的区域。
     # `IFS='|'` 设置了内部字段分隔符，使多个选项之间用竖线分隔。`drawDialog` 是一个函数，它展示了一个带有标题和菜单的对话框。
@@ -237,38 +229,6 @@ installOptions() {
     # 最终的结果可能是 "America/New_York" 这样的格式，并存储在 `timezonePrompt` 变量中，供后续使用。
     timezonePrompt="$area/$location"
 
-
-
-    # # This line is also taken from the normal Void installer.
-    # localeList=$(grep -E '\.UTF-8' /etc/default/libc-locales | awk '{print $1}' | sed -e 's/^#//')
-
-    # for i in $localeList
-    # do
-    #     # We don't need to specify an item here, only a tag and print it to stdout
-    #     tmp+=("$i" $(printf '\u200b')) # Use a zero width unicode character for the item
-    # done
-
-    # localeChoice=$(drawDialog --no-cancel --title "Locale Selection" --menu "Please choose your system locale." 0 0 0 ${tmp[@]})
-
-    # locale="LANG=$localeChoice"
-    # libclocale="$localeChoice UTF-8"
-
-    # if drawDialog --title "Repository Mirror" --yesno "Would you like to set your repo mirror?" 0 0 ; then
-    #     xmirror
-    #     installRepo=$(cat /etc/xbps.d/*-repository-main.conf | sed 's/repository=//g')
-    # else
-    #     if [ "$muslSelection" == "glibc" ]; then
-    #         installRepo="https://repo-default.voidlinux.org/current"
-    #     elif [ "$muslSelection" == "musl" ]; then
-    #         installRepo="https://repo-default.voidlinux.org/current/musl"
-    #     fi
-    # fi
-
-    # if [ "$muslSelection" == "glibc" ]; then
-    #     ARCH="x86_64"
-    # elif [ "$muslSelection" == "musl" ]; then
-    #     ARCH="x86_64-musl"
-    # fi
 
     # 这一行也来自于普通的 Void 安装程序。
     localeList=$(grep -E '\.UTF-8' /etc/default/libc-locales | awk '{print $1}' | sed -e 's/^#//')
