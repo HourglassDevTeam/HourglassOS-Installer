@@ -523,6 +523,23 @@ confirmInstallationOptions() {
     
 }
 
+
+
+# Define a helper function for installing services
+install_service() {
+    service_name=$1
+    chroot /mnt /bin/bash -c "ln -s /etc/sv/$service_name /var/service" || failureCheck
+}
+
+# Define desktop installation logic
+install_desktop_environment() {
+    echo -e "Installing $1 desktop environment... \n"
+    xbps-install -Sy -R $installRepo -r /mnt $2 || failureCheck
+    install_service $3
+    echo -e "$1 has been installed. \n"
+}
+
+
 install() {
 
 
@@ -977,21 +994,6 @@ install() {
         echo -e "Pulseaudio 已安装。 \n"
     fi
 
-
-
-    # Define a helper function for installing services
-    install_service() {
-        service_name=$1
-        chroot /mnt /bin/bash -c "ln -s /etc/sv/$service_name /var/service" || failureCheck
-    }
-
-    # Define desktop installation logic
-    install_desktop_environment() {
-        echo -e "Installing $1 desktop environment... \n"
-        xbps-install -Sy -R $installRepo -r /mnt $2 || failureCheck
-        install_service $3
-        echo -e "$1 has been installed. \n"
-    }
 
     case $desktopChoice in
         gnome)
