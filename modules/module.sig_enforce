@@ -1,4 +1,17 @@
 #!/bin/bash
+# module.sig_enforce.sh
+#
+# 描述：
+# 该脚本用于启用 Linux 内核的 `module.sig_enforce` 参数。`module.sig_enforce=1` 会强制要求所有加载的内核模块都必须经过签名认证，未签名或签名不匹配的模块将无法加载。这一机制可以增强系统的模块安全性，防止未经授权的内核模块被注入。
+#
+# 根据用户系统的引导加载程序类型（grub、efistub、uki），脚本会修改不同的配置文件，并应用更改：
+#
+# - **grub**：修改 GRUB 的配置文件 `grub`，添加 `module.sig_enforce=1` 内核参数，并通过 `update-grub` 使其生效。
+# - **efistub**：修改 `efibootmgr-kernel-hook` 配置文件，通过 `xbps-reconfigure` 重新配置内核。
+# - **uki**：在 UKI 的 `kernelparams` 文件中添加 `module.sig_enforce=1` 参数，并重建 UKI 镜像以更新内核参数。
+#
+# 启用 `module.sig_enforce` 可以在运行时增强内核模块加载的安全性，确保只有经过签名的合法模块可以被加载，从而提升系统安全。
+
 title=module.sig_enforce
 description="- Enables module.sig_enforce kernel parameter"
 status=off

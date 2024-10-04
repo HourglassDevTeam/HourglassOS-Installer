@@ -1,4 +1,22 @@
 #!/bin/bash
+# net.ipv4.conf.all.rp_filter.sh
+#
+# 描述：
+# 该脚本用于设置 Linux 系统中 `net.ipv4.conf.all.rp_filter` 的值。`rp_filter` 是反向路径过滤（Reverse Path Filtering）的一个内核参数，用于防止 IP 地址欺骗攻击。通过对入站网络数据包的源地址进行验证，反向路径过滤可以提高网络安全性。
+#
+# 脚本会为用户提供以下选项：
+# - **Strict 模式**：`rp_filter=1`，严格模式会拒绝所有不匹配源地址的入站数据包。这是最安全的配置。
+# - **Loose 模式**：`rp_filter=2`，宽松模式允许网络拓扑复杂时使用，允许多路径路由的情况下接收数据包。
+# - **None**：关闭反向路径过滤。
+#
+# 根据用户的选择，脚本会将对应的值写入到 `/mnt/etc/sysctl.conf` 文件中，并在系统重启后生效。
+#
+# 选项：
+# - `Strict`：设置 `rp_filter=1`，启用严格模式。
+# - `Loose`：设置 `rp_filter=2`，启用宽松模式。
+#
+# 启用反向路径过滤可以提高网络安全性，特别是在多宿主网络设备或复杂路由拓扑中管理入站流量。
+
 title=net.ipv4.conf.all.rp_filter
 description="- Provides a choice to set the net.ipv4.conf.all.rp_filter value"
 status=off

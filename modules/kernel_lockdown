@@ -1,4 +1,19 @@
 #!/bin/bash
+# kernel_lockdown.sh
+#
+# 描述：
+# 该脚本用于配置 Linux 内核的 "lockdown" 模式。Lockdown 模式可以限制用户态进程对内核的某些操作，从而增强系统的安全性。用户可以选择以下两种模式：
+# 1. **integrity 模式**：禁止用户态进程修改正在运行的内核（例如，禁止通过加载模块来改变内核状态），确保系统完整性。
+# 2. **confidentiality 模式**：在 integrity 模式的基础上进一步限制，防止提取内核中的机密信息。
+#
+# 本脚本通过设置内核引导参数 `lockdown=integrity` 或 `lockdown=confidentiality` 来启用对应的 lockdown 模式。根据系统的引导加载程序类型（grub、efistub、uki），脚本会修改不同的配置文件，并应用更改。
+#
+# - **grub**：修改 GRUB 配置，并通过 `update-grub` 使更改生效。
+# - **efistub**：修改 `efibootmgr-kernel-hook` 配置，并通过 `xbps-reconfigure` 重新配置内核。
+# - **uki**：修改 `kernelparams` 文件，并重建 UKI 镜像以更新内核参数。
+#
+# Lockdown 模式可以通过提高系统的内核保护等级来增强系统的安全性，尤其在面临恶意行为时有更好的防护作用。
+
 title=kernel_lockdown
 description="- Provides a choice to set the kernel lockdown mode"
 status=off

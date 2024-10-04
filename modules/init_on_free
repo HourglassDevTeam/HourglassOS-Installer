@@ -1,4 +1,16 @@
 #!/bin/bash
+# init_on_free.sh
+# 
+# 描述：
+# 该脚本用于启用 `init_on_free` 内核参数，这是一个安全增强措施，确保内存释放时会被初始化为零，防止通过释放的内存泄露潜在的敏感信息。脚本修改引导加载程序的配置，添加 `init_on_free=1` 参数，确保每次内存释放后都被清零。
+# 
+# 本脚本支持三种不同的引导加载程序配置：
+# 1. **grub**：针对使用 GRUB 的系统，脚本会在 GRUB 的内核引导选项中添加 `init_on_free=1` 参数，并通过 `update-grub` 应用这些更改。
+# 2. **efistub**：对于使用 EFI stub 引导的系统，脚本会修改 `efibootmgr-kernel-hook` 中的内核选项，并使用 `xbps-reconfigure` 重新配置内核。
+# 3. **uki**：对于使用统一内核镜像（UKI）的系统，脚本会修改 `kernelparams` 文件中的内核参数，并重建 UKI 镜像，替换旧的 EFI 启动项。
+#
+# 该脚本对于提升系统的安全性非常有用，能够确保每次内存释放时将其清零，防止内存复用过程中泄露敏感数据。
+
 title=init_on_free
 description="- Enables init_on_free kernel parameter"
 status=off
