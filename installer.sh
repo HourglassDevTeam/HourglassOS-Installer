@@ -1035,17 +1035,16 @@ install() {
             ;;
     esac
 
-        clear
+    clear
 
-        # chroot 是 Linux 和类 Unix 系统中的一个命令，它将当前或某个进程的根目录更改为一个新的目录，从而创建一个“受限的”运行环境。
-        # 在这个环境中，程序无法访问新根目录以外的文件系统部分。chroot 的名称来源于“change root”（改变根目录）。
+    # chroot 是 Linux 和类 Unix 系统中的一个命令，它将当前或某个进程的根目录更改为一个新的目录，从而创建一个“受限的”运行环境。
+    # 在这个环境中，程序无法访问新根目录以外的文件系统部分。chroot 的名称来源于“change root”（改变根目录）。
 
-        echo -e "桌面环境设置完成。 \n"
-        echo -e "系统将 chroot 进入新安装的环境进行最终设置... \n"
-        sleep 1
+    echo -e "桌面环境设置完成。 \n"
+    echo -e "系统将 chroot 进入新安装的环境进行最终设置... \n"
+    sleep 1
 
-        chrootFunction
-    fi
+    chrootFunction
 
 }
 
