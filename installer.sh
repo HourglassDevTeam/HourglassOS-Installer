@@ -321,8 +321,8 @@ installOptions() {
 
         # Using sh here as a simple solution to it misbehaving when ran normally
         # 这里使用 sh -c 是为了在一个新的 sh 进程中执行命令。这样做的好处是确保命令能够在独立的 shell 环境中运行，避免影响到当前脚本的环境变量或其它上下文。
-        # modulesChoice=( $(sh -c "dialog --stdout --title 'Extra Options' --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" --checklist 'Enable or disable extra install options: ' 0 0 0 $(echo "${modulesDialogArray[@]}")") )
-        modulesChoice=( $(sh -c "dialog --stdout --title '额外选项' --no-mouse --backtitle 'https://github.com/kkrruumm/void-install-script' --checklist '启用或禁用额外的安装选项：' 0 0 0 $(echo \"${modulesDialogArray[@]}\")") )
+        modulesChoice=( $(sh -c "dialog --stdout --title 'Extra Options' --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" --checklist 'Enable or disable extra install options: ' 0 0 0 $(echo "${modulesDialogArray[@]}")") )
+        # modulesChoice=( $(sh -c "dialog --stdout --title '额外选项' --no-mouse --backtitle 'https://github.com/kkrruumm/void-install-script' --checklist '启用或禁用额外的安装选项：' 0 0 0 $(echo \"${modulesDialogArray[@]}\")") )
 
             confirmInstallationOptions
         elif [ "$installType" == "minimal" ]; then
