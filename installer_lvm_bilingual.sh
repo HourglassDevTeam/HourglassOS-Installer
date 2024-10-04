@@ -2,6 +2,7 @@
 
 # echo -e 是用于在 Bash 脚本中输出文本的命令，其中 -e 选项用于启用对反斜杠转义字符的解释。
 if [ "$USER" != root ]; then
+    # echo -e "${RED}Please execute this script as root. \n${NC}"
     echo -e "${RED}请以 root 用户身份执行此脚本。\n${NC}"
     exit 1
 fi
@@ -16,6 +17,8 @@ NC='\033[0m'
 # Source file that contains "hidden" settings
 # 在 Bash 脚本中，if [ "$#" == "1" ]; 用来检查传递给脚本的命令行参数数量是否为 1。即首先检查脚本是否传递了一个参数。
 if [ "$#" == "1" ]; then
+    # echo -e "Sourcing hidden options file... \n"
+    # commandFailure="Sourcing hidden options file has failed."
     echo -e "正在加载隐藏的选项文件... \n"
     commandFailure="加载隐藏的选项文件失败。"
     . "$1" || failureCheck
@@ -23,18 +26,22 @@ fi
 
 entry() {
 
+    # Unsetting to prevent duplicates when the installer scans for modules
     # 这段代码的作用是在安装程序扫描模块时，确保不会出现重复的模块项。
     # 它首先检查一个名为 modulesDialogArray 的变量是否已定义，如果已定义则将其取消定义，以防止后续操作中出现重复的模块。
     if [ -n "$modulesDialogArray" ]; then
         unset modulesDialogArray
     fi
 
+    # This script will only work on UEFI systems.
     # 这段代码的作用是检查系统是否通过 UEFI 启动，如果系统是通过 BIOS 启动的，则会提示错误信息并执行相应的错误处理函数。
     if [ ! -e "/sys/firmware/efi" ]; then
+        # commandFailure="This script only supports UEFI systems, but it appears we have booted as BIOS."
         commandFailure="此脚本仅支持 UEFI 系统，但似乎本机器是通过 BIOS 启动的。"
         failureCheck
     fi
 
+    # Autodetection for glibc/musl　
     # 这段代码的作用是自动检测系统使用的 C 标准库是 glibc 还是 musl，并根据结果设置变量 muslSelection。
     if ldd --version | grep GNU ; then
         muslSelection="glibc"
@@ -43,6 +50,7 @@ entry() {
     fi
 
     if [ "$(uname -m)" != "x86_64" ]; then
+        # commandFailure="This systems CPU architecture is not currently supported by this install script."
         commandFailure="此安装脚本当前不支持该系统的 CPU 架构。"
         failureCheck
     fi
@@ -50,36 +58,45 @@ entry() {
     # 这段代码的作用是检查当前目录下是否存在名为 systemchroot.sh 的脚本文件。
     # 如果文件不存在，则设置一个错误信息，并调用 failureCheck 函数处理错误。
     if [ ! -e "$(pwd)/systemchroot.sh" ]; then
-        commandFailure="systemchroot脚本似乎缺失。这可能是因为它的名称不正确，或者它在 $(pwd) 中不存在。"
+        commandFailure="次要脚本似乎缺失。这可能是因为它的名称不正确，或者它在 $(pwd) 中不存在。"
+        # commandFailure="Secondary script appears to be missing. This could be because the name of it is incorrect, or it does not exist in $(pwd)."
         failureCheck
     fi
 
     # 这段代码的作用是检查当前工作目录下是否存在名为 modules 的目录。
     # 如果目录不存在，则设置一个错误信息，并调用 failureCheck 函数处理错误。
     if [ ! -e "$(pwd)/modules" ]; then
+        # commandFailure="Modules directory appears to be missing. This could be because the name of it is incorrect, or it does not exist in $(pwd)."
         commandFailure="模块目录似乎缺失。它在 $(pwd) 中并不存在，可能是因为名称不正确。"
         failureCheck
     fi
 
+    # echo -e "Testing network connectivity... \n"
     echo -e "正在测试网络连接...\n"
 
     # 注意我们的国内版才这样ping
     if ping -c 1 baidu.com &>/dev/null || ping -c 1 qq.com &>/dev/null ; then
+        # echo -e "Network check succeeded. \n"
         echo -e "网络已经正常运行。\n"
     else
+        # commandFailure="Network check failed. Please make sure your network is active."
         commandFailure="网络检测失败。请确保您的网络处于活动状态。"
         failureCheck
     fi
 
+    # echo -e "Begin void installer... \n"
     echo -e "开始 HourglassOS 安装程序... \n"
 
+    # echo -e "Grabbing installer dependencies... \n"
     echo -e "正在获取安装程序的依赖项... \n"
 
+    # commandFailure="Dependency installation has failed."
     commandFailure="依赖项安装失败。"
     
     xbps-install -Suy xbps || failureCheck # 以防 ISO 中的 xbps 过时
     xbps-install -Suy dialog bc parted || failureCheck
 
+    # echo -e "Creating .dialogrc... \n"
     echo -e "正在创建 .dialogrc... \n"
     dialog --create-rc ~/.dialogrc
     # 我觉得 dialog 默认的蓝色背景有点刺眼，这里将它改成黑色。
@@ -93,9 +110,14 @@ entry() {
 
 diskConfiguration() {
 
+    # We're going to define all disk options and use them later on so the user can verify the layout and return to entry to start over if something isn't correct, before touching the disks.
     # 先定义所有磁盘选项，让用户在修改磁盘前验证磁盘布局。如果发现有问题，用户可以返回重新选择。
     diskPrompt=$(lsblk -d -o NAME,SIZE -n -e7)
     diskReadout=$(lsblk -o NAME,SIZE,TYPE -e7)
+
+    # if ! diskPrompt=$(drawDialog --begin 2 2 --title "Available Disks" --infobox "$diskReadout" 0 0 --and-widget --title "Partitioner" --menu 'The disk you choose will not be modified until you confirm your installation options.\n\nPlease choose the disk you would like to partition and install Void Linux to:' 0 0 0 $diskPrompt) ; then
+    #     exit 0
+    # fi
 
     # 这段代码的作用是通过 drawDialog 工具展示一个带有磁盘信息的对话框，允许用户选择一个磁盘。如果用户取消或关闭了对话框，则脚本将退出。
     if ! diskPrompt=$(drawDialog --begin 2 2 --title "可用磁盘" --infobox "$diskReadout" 0 0 --and-widget --title "分区工具" --menu '在确认您的安装选项之前，您选择的磁盘不会被修改。\n\n请选择您希望分区并安装 HourglassOS 的磁盘：' 0 0 0 $diskPrompt) ; then
@@ -113,21 +135,32 @@ diskConfiguration() {
     partOutput=$(partitionerOutput)
 
     # 这段代码的作用是通过 drawDialog 提供一个交互式对话框，询问用户是否希望创建交换分区（swap partition），如果用户选择 "是"，则进一步询问用户希望创建多大的交换分区。根据用户输入的大小进行计算，并更新分区信息。
- 
+    # if drawDialog --begin 2 2 --title "Disk Details" --infobox "$partOutput" 0 0 --and-widget --title "Partitioner" --yesno "Would you like to have a swap partition?" 0 0 ; then
+    #     swapPrompt="Yes"
+    #     partOutput=$(partitionerOutput)
+        
+    #     swapInput=$(drawDialog --begin 2 2 --title "Disk Details" --infobox "$partOutput" 0 0 --and-widget --no-cancel --title "Partitioner" --inputbox "How large would you like your swap partition to be?\n(Example: '4G')" 0 0)
+
+    #     sizeInput=$swapInput
+    #     diskCalculator
+    #     partOutput=$(partitionerOutput)
+    # fi
 
     if drawDialog --begin 2 2 --title "磁盘详情" --infobox "$partOutput" 0 0 --and-widget --title "分区工具" --yesno "您想要创建一个交换分区吗？" 0 0 ; then
-        swapPrompt="Yes"
-        partOutput=$(partitionerOutput)
-        
-        swapInput=$(drawDialog --begin 2 2 --title "磁盘详情" --infobox "$partOutput" 0 0 --and-widget --no-cancel --title "分区工具" --inputbox "您想要多大的交换分区？\n（例如：'4G')" 0 0)
+    swapPrompt="Yes"
+    partOutput=$(partitionerOutput)
+    
+    swapInput=$(drawDialog --begin 2 2 --title "磁盘详情" --infobox "$partOutput" 0 0 --and-widget --no-cancel --title "分区工具" --inputbox "您想要多大的交换分区？\n（例如：'4G')" 0 0)
 
-        sizeInput=$swapInput
-        diskCalculator
-        partOutput=$(partitionerOutput)
-    fi
+    sizeInput=$swapInput
+    diskCalculator
+    partOutput=$(partitionerOutput)
+fi
 
+    # rootPrompt=$(drawDialog --begin 2 2 --title "Disk Details" --infobox "$partOutput" 0 0 --and-widget --no-cancel --title "Partitioner" --inputbox "If you would like to limit the size of your root filesystem, such as to have a separate home partition, you can enter a value such as '50G' here.\n\nOtherwise, if you would like your root partition to take up the entire drive, enter 'full' here." 0 0)
 
     rootPrompt=$(drawDialog --begin 2 2 --title "磁盘详情" --infobox "$partOutput" 0 0 --and-widget --no-cancel --title "分区工具" --inputbox "如果您希望限制根文件系统的大小（例如为了创建单独的 /home 分区），请在此输入一个值，例如 '50G'。\n\n否则，如果您希望根分区占用整个磁盘空间，请输入 'full'。" 0 0)
+    # If the user wants the root partition to take up all space after the EFI partition, a separate home on this disk isn't possible.
     if [ "$rootPrompt" == "full" ]; then
         # 设置 separateHomePossible 变量为 0，表示不可能创建单独的 /home 分区，因为根分区占用了整个磁盘。
         separateHomePossible=0
@@ -141,6 +174,19 @@ diskConfiguration() {
         separateHomePossible=1
     fi
 
+    # if [ "$separateHomePossible" == "1" ]; then
+    #     if drawDialog --begin 2 2 --title "Disk Details" --infobox "$partOutput" 0 0 --and-widget --title "Partitioner" --yesno "Would you like to have a separate home partition?" 0 0 ; then
+    #         homePrompt="Yes"
+    #         homeInput=$(drawDialog --begin 2 2 --title "Disk Details" --infobox "$partOutput" 0 0 --and-widget --no-cancel --title "Partitioner" --inputbox "How large would you like your home partition to be?\n(Example: '100G')\n\nYou can choose to use the rest of your disk after the root partition by entering 'full' here." 0 0)
+            
+    #         if [ "$homeInput" != "full" ]; then
+    #             sizeInput=$homeInput
+    #             diskCalculator
+    #         fi
+    #     else
+    #         homePrompt="No"
+    #     fi
+    # fi
 
     if [ "$separateHomePossible" == "1" ]; then
         if drawDialog --begin 2 2 --title "磁盘详情" --infobox "$partOutput" 0 0 --and-widget --title "分区工具" --yesno "您希望创建一个单独的 /home 分区吗？" 0 0 ; then
@@ -525,6 +571,16 @@ confirmInstallationOptions() {
 
 install() {
 
+    # if [ "$wipePrompt" == "Yes" ]; then
+    #     commandFailure="Disk erase has failed."
+    #     clear
+    #     echo -e "Beginning disk secure erase with $passInput passes and then overwriting with zeroes. \n"
+    #     shred --verbose --random-source=/dev/urandom -n$passInput --zero $diskInput || failureCheck
+    # fi
+
+    # clear
+    # echo "Begin disk partitioning..."
+
 
     # 如果选择了擦除磁盘，执行擦除操作
     if [ "$wipePrompt" == "Yes" ]; then
@@ -536,6 +592,21 @@ install() {
 
     clear
     echo "开始磁盘分区..."
+
+
+    # We need to wipe out any existing VG on the chosen disk before the installer can continue, this is somewhat scuffed but works.
+    # deviceVG=$(pvdisplay $diskInput* | grep "VG Name" | while read c1 c2; do echo $c2; done | sed 's/Name//g')
+
+    # if [ -z $deviceVG ]; then
+    #     echo -e "Existing VG not found, no need to do anything... \n"
+    # else
+    #     commandFailure="VG Destruction has failed."
+    #     echo -e "Existing VG found... \n"
+    #     echo -e "Wiping out existing VG... \n"
+
+    #     vgchange -a n $deviceVG || failureCheck
+    #     vgremove $deviceVG || failureCheck
+    # fi
 
 
     # VG 是 Volume Group（卷组）的缩写，是逻辑卷管理器（LVM）中的一个核心概念。
@@ -576,6 +647,53 @@ install() {
     mkfs.vfat $partition1 || failureCheck
 
     clear2
+
+    # if [ "$encryptionPrompt" == "Yes" ]; then
+    #     echo "Configuring partitions for encrypted install..."
+
+    #     if [ -z "$hash" ]; then
+    #         hash="sha512"
+    #     fi
+    #     if [ -z "$keysize" ]; then
+    #         keysize="512"
+    #     fi
+    #     if [ -z "$itertime" ]; then
+    #         itertime="10000"
+    #     fi
+
+    #     echo -e "${YELLOW}Enter your encryption passphrase here. ${NC}\n"
+
+    #     case $bootloaderChoice in
+    #         uki)
+    #             cryptsetup luksFormat --type luks2 --batch-mode --verify-passphrase --hash $hash --key-size $keysize --iter-time $itertime --pbkdf argon2id --use-urandom $partition2 || failureCheck
+    #             ;;
+    #         efistub)
+    #             # We get to use luks2 here, no need to maintain compatibility.
+    #             cryptsetup luksFormat --type luks2 --batch-mode --verify-passphrase --hash $hash --key-size $keysize --iter-time $itertime --pbkdf argon2id --use-urandom $partition2 || failureCheck
+    #             ;;
+    #         none)
+    #             # Best effort encryption here, should provide options for luks version and pbkdf in the future
+    #             cryptsetup luksFormat --type luks2 --batch-mode --verify-passphrase --hash $hash --key-size $keysize --iter-time $itertime --pbkdf argon2id --use-urandom $partition2 || failureCheck
+    #             ;;
+    #         grub)
+    #             # We need to use luks1 and pbkdf2 to maintain compatibility with grub here.
+    #             # It should be possible to replace the grub EFI binary to add luks2 support, but for the time being I'm going to leave this as luks1.
+    #             cryptsetup luksFormat --type luks1 --batch-mode --verify-passphrase --hash $hash --key-size $keysize --iter-time $itertime --pbkdf pbkdf2 --use-urandom $partition2 || failureCheck
+    #             ;;
+    #     esac
+
+    #     echo -e "${YELLOW}Opening new encrypted container... ${NC}\n"
+    #     cryptsetup luksOpen $partition2 void || failureCheck
+    # else
+    #     pvcreate $partition2 || failureCheck
+    #     echo -e "Creating volume group... \n"
+    #     vgcreate void $partition2 || failureCheck
+    # fi
+
+    # if [ "$encryptionPrompt" == "Yes" ]; then
+    #     echo -e "Creating volume group... \n"
+    #     vgcreate void /dev/mapper/void || failureCheck
+    # fi
 
     if [ "$encryptionPrompt" == "Yes" ]; then
     echo "配置加密安装的分区..."
@@ -629,6 +747,29 @@ install() {
         vgcreate void /dev/mapper/void || failureCheck
     fi
 
+
+    # echo -e "Creating volumes... \n"
+
+    # if [ "$swapPrompt" == "Yes" ]; then
+    #     echo -e "Creating swap volume..."
+    #     lvcreate --name swap -L $swapInput void || failureCheck
+    #     mkswap /dev/void/swap || failureCheck
+    # fi
+
+    # if [ "$rootPrompt" == "full" ]; then
+    #     echo -e "Creating full disk root volume..."
+    #     lvcreate --name root -l 100%FREE void || failureCheck
+    # else
+    #     echo -e "Creating $rootPrompt disk root volume..."
+    #     lvcreate --name root -L $rootPrompt void || failureCheck
+    # fi
+
+    # if [ "$fsChoice" == "ext4" ]; then
+    #     mkfs.ext4 /dev/void/root || failureCheck
+    # elif [ "$fsChoice" == "xfs" ]; then
+    #     mkfs.xfs /dev/void/root || failureCheck
+    # fi
+
     echo -e "正在创建卷... \n"
 
     if [ "$swapPrompt" == "Yes" ]; then
@@ -652,6 +793,23 @@ install() {
     fi
 
 
+    # if [ "$separateHomePossible" == "1" ]; then
+    #     if [ "$homePrompt" == "Yes" ]; then
+    #         if [ "$homeInput" == "full" ]; then
+    #             lvcreate --name home -l 100%FREE void || failureCheck
+    #         else
+    #             lvcreate --name home -L $homeInput void || failureCheck
+    #         fi
+
+    #         if [ "$fsChoice" == "ext4" ]; then
+    #             mkfs.ext4 /dev/void/home || failureCheck
+    #         elif [ "$fsChoice" == "xfs" ]; then
+    #             mkfs.xfs /dev/void/home || failureCheck
+    #         fi
+
+    #     fi
+    # fi
+
     if [ "$separateHomePossible" == "1" ]; then
         if [ "$homePrompt" == "Yes" ]; then
             if [ "$homeInput" == "full" ]; then
@@ -673,6 +831,26 @@ install() {
         fi
     fi
 
+
+    # echo -e "Mounting partitions... \n"
+    # commandFailure="Mounting partitions has failed."
+    # mount /dev/void/root /mnt || failureCheck
+    # for dir in dev proc sys run; do mkdir -p /mnt/$dir ; mount --rbind /$dir /mnt/$dir ; mount --make-rslave /mnt/$dir ; done || failureCheck
+
+    # case $bootloaderChoice in
+    #     uki)
+    #         mkdir -p /mnt/boot/efi || failureCheck
+    #         mount $partition1 /mnt/boot/efi || failureCheck
+    #         ;;
+    #     efistub)
+    #         mkdir -p /mnt/boot || failureCheck
+    #         mount $partition1 /mnt/boot || failureCheck
+    #         ;;
+    #     grub)
+    #         mkdir -p /mnt/boot/efi || failureCheck
+    #         mount $partition1 /mnt/boot/efi
+    #         ;;
+    # esac
 
     echo -e "正在挂载分区... \n"
     commandFailure="挂载分区失败。"
@@ -699,11 +877,18 @@ install() {
     esac # esac: 结束 case 语句。
 
 
+    # echo -e "Copying keys... \n"
+    # commandFailure="Copying XBPS keys has failed."
+    # mkdir -p /mnt/var/db/xbps/keys || failureCheck
+    # cp /var/db/xbps/keys/* /mnt/var/db/xbps/keys || failureCheck
 
     echo -e "正在复制密钥... \n"
     commandFailure="复制 XBPS 密钥失败。"
     mkdir -p /mnt/var/db/xbps/keys || failureCheck
     cp /var/db/xbps/keys/* /mnt/var/db/xbps/keys || failureCheck
+
+    # echo -e "Installing base system... \n"
+    # commandFailure="Base system installation has failed."
 
     echo -e "正在安装基础系统... \n"
     commandFailure="基础系统安装失败。"
@@ -761,6 +946,32 @@ install() {
             ;;
     esac
 
+    # # The dkms package will install headers for 'linux' rather than '$kernelChoice' unless we create a virtual package here, and we do not need both.
+    # if [ "$kernelChoice" == "linux-lts" ]; then
+    #     echo "virtualpkg=linux-headers:linux-lts-headers" >> /mnt/etc/xbps.d/headers.conf || failureCheck
+    # elif [ "$kernelChoice" == "linux-mainline" ]; then
+    #     echo "virtualpkg=linux-headers:linux-mainline-headers" >> /mnt/etc/xbps.d/headers.conf || failureCheck
+    # fi
+
+    # case $bootloaderChoice in
+    #     grub)
+    #         echo -e "Installing grub... \n"
+    #         commandFailure="Grub installation has failed."
+    #         xbps-install -Sy -R $installRepo -r /mnt grub-x86_64-efi || failureCheck
+    #         ;;
+    #     efistub)
+    #         echo -e "Installing efibootmgr... \n"
+    #         commandFailure="efibootmgr installation has failed."
+    #         xbps-install -Sy -R $installRepo -r /mnt efibootmgr || failureCheck
+    #         ;;
+    #     uki)
+    #         echo -e "Installing efibootmgr and ukify... \n"
+    #         commandFailure="efibootmgr and ukify installation has failed."
+    #         xbps-install -Sy -R $installRepo -r /mnt efibootmgr ukify systemd-boot-efistub || failureCheck
+    #         ;;
+    # esac
+
+
     # dkms 包将安装 'linux' 的头文件，而不是 '$kernelChoice'，除非我们在这里创建一个虚拟包，而且我们不需要两者。
     if [ "$kernelChoice" == "linux-lts" ]; then
         echo "virtualpkg=linux-headers:linux-lts-headers" >> /mnt/etc/xbps.d/headers.conf || failureCheck
@@ -787,12 +998,26 @@ install() {
     esac
 
 
+    # if [ "$installRepo" != "https://repo-default.voidlinux.org/current" ] && [ "$installRepo" != "https://repo-default.voidlinux.org/current/musl" ]; then
+    #     commandFailure="Repo configuration has failed."
+    #     echo -e "Configuring mirror repo... \n"
+    #     xmirror -s "$installRepo" -r /mnt || failureCheck
+    # fi
+
     if [ "$installRepo" != "https://repo-default.voidlinux.org/current" ] && [ "$installRepo" != "https://repo-default.voidlinux.org/current/musl" ]; then
         commandFailure="仓库配置失败。"
         echo -e "正在配置镜像仓库... \n"
         xmirror -s "$installRepo" -r /mnt || failureCheck
     fi
 
+
+    # commandFailure="$suChoice installation has failed."
+    # echo -e "Installing $suChoice... \n"
+    # if [ "$suChoice" == "sudo" ]; then
+    #     xbps-install -Sy -R $installRepo -r /mnt sudo || failureCheck
+    # elif [ "$suChoice" == "doas" ]; then
+    #     xbps-install -Sy -R $installRepo -r /mnt opendoas || failureCheck
+    # fi
 
     commandFailure="$suChoice 安装失败。"
     echo -e "正在安装 $suChoice... \n"
@@ -802,6 +1027,13 @@ install() {
         xbps-install -Sy -R $installRepo -r /mnt opendoas || failureCheck
     fi
 
+
+    # if [ "$encryptionPrompt" == "Yes" ]; then
+    #     commandFailure="Cryptsetup installation has failed."
+    #     echo -e "Installing cryptsetup... \n"
+    #     xbps-install -Sy -R $installRepo -r /mnt cryptsetup || failureCheck
+    # fi
+
     if [ "$encryptionPrompt" == "Yes" ]; then
         commandFailure="Cryptsetup 安装失败。"
         echo -e "正在安装 cryptsetup... \n"
@@ -809,7 +1041,24 @@ install() {
     fi
 
 
+    # echo -e "Base system installed... \n"
     echo -e "基础系统已安装... \n"
+
+    # echo -e "Configuring fstab... \n"
+    # commandFailure="Fstab configuration has failed."
+    # partVar=$(blkid -o value -s UUID $partition1)
+    # case $bootloaderChoice in
+    #     grub)
+    #         echo "UUID=$partVar     /boot/efi   vfat    defaults   0   0" >> /mnt/etc/fstab || failureCheck
+    #         ;;
+    #     efistub)
+    #         echo "UUID=$partVar     /boot       vfat    defaults    0   0" >> /mnt/etc/fstab || failureCheck
+    #         ;;
+    #     uki)
+    #         echo "UUID=$partVar     /boot/efi   vfat    defaults    0   0" >> /mnt/etc/fstab || failureCheck
+    #         ;;
+    # esac
+
 
     echo -e "正在配置 fstab... \n"
     commandFailure="Fstab 配置失败。"
@@ -839,7 +1088,9 @@ install() {
 
     case $bootloaderChoice in
         efistub)
+            # echo "Configuring dracut for efistub boot..."
             echo "正在为 efistub 引导配置 dracut..."
+            # commandFailure="Dracut configuration has failed."
             commandFailure="Dracut 配置失败。"
             echo 'hostonly="yes"' >> /mnt/etc/dracut.conf.d/30.conf || failureCheck
             echo 'use_fstab="yes"' >> /mnt/etc/dracut.conf.d/30.conf || failureCheck
@@ -847,15 +1098,21 @@ install() {
             echo 'install_items+=" /etc/crypttab "' >> /mnt/etc/dracut.conf.d/30.conf || failureCheck
             echo 'add_drivers+=" vfat nls_cp437 nls_iso8859_1 "' >> /mnt/etc/dracut.conf.d/30.conf || failureCheck
 
+            # echo "Moving runit service for efistub boot..."
             echo "正在移动 efistub 引导的 runit 服务..."
+            # commandFailure="Moving runit service has failed."
             commandFailure="移动 runit 服务失败。"
             mv /mnt/etc/runit/core-services/03-filesystems.sh{,.bak} || failureCheck
 
+            # echo "Configuring xbps for efistub boot..."
             echo "正在为 efistub 引导配置 xbps..."
+            # commandFailure="efistub xbps configuration has failed."
             commandFailure="efistub xbps 配置失败。"
             echo "noextract=/etc/runit/core-services/03-filesystems.sh" >> /mnt/etc/xbps.d/xbps.conf || failureCheck
 
+            # echo "Editing efibootmgr for efistub boot..."
             echo "正在编辑 efibootmgr 以适应 efistub 引导..."
+            # commandFailure="efibootmgr configuration has failed."
             commandFailure="efibootmgr 配置失败。"
             sed -i -e 's/MODIFY_EFI_ENTRIES=0/MODIFY_EFI_ENTRIES=1/g' /mnt/etc/default/efibootmgr-kernel-hook || failureCheck
             echo DISK="$diskInput" >> /mnt/etc/default/efibootmgr-kernel-hook || failureCheck
@@ -875,6 +1132,8 @@ install() {
             ;;
         grub)
             if [ "$encryptionPrompt" == "Yes" ]; then
+                # commandFailure="Configuring grub for full disk encryption has failed."
+                # echo -e "Configuring grub for full disk encryption... \n"
                 commandFailure="配置 grub 以支持全盘加密失败。"
                 echo -e "正在为全盘加密配置 grub... \n"
                 partVar=$(blkid -o value -s UUID $partition2)
@@ -883,12 +1142,16 @@ install() {
             fi
 
             if [ "$acpi" == "false" ]; then
+                # commandFailure="Disabling ACPI has failed."
+                # echo -e "Disabling ACPI... \n"
                 commandFailure="禁用 ACPI 失败。"
                 echo -e "正在禁用 ACPI... \n"
                 sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4 acpi=off/g' /mnt/etc/default/grub || failureCheck
             fi
             ;;
         uki)
+            # commandFailure="Configuring UKI kernel parameters has failed."
+            # echo -e "Configuring kernel parameters... \n"
             commandFailure="配置 UKI 内核参数失败。"
             echo -e "正在配置内核参数... \n"
             if [ "$encryptionPrompt" == "Yes" ]; then
@@ -906,6 +1169,12 @@ install() {
             ;;
     esac
 
+    # if [ "$muslSelection" == "glibc" ]; then
+    #     commandFailure="Locale configuration has failed."
+    #     echo -e "Configuring locales... \n"
+    #     echo $locale > /mnt/etc/locale.conf || failureCheck
+    #     echo $libclocale >> /mnt/etc/default/libc-locales || failureCheck
+    # fi
 
     if [ "$muslSelection" == "glibc" ]; then
         commandFailure="区域设置配置失败。"
@@ -914,15 +1183,105 @@ install() {
         echo $libclocale >> /mnt/etc/default/libc-locales || failureCheck
     fi
 
+    # commandFailure="Hostname configuration has failed."
+    # echo -e "Setting hostname.. \n"
+    # echo $hostnameInput > /mnt/etc/hostname || failureCheck
+
     commandFailure="主机名配置失败。"
     echo -e "正在设置主机名... \n"
     echo $hostnameInput > /mnt/etc/hostname || failureCheck
 
 
+    # if [ "$installType" == "minimal" ]; then
+    #     chrootFunction
+    # elif [ "$installType" == "desktop" ]; then
+
+    #     commandFailure="Graphics driver installation has failed."
+
+    #     for i in "${graphicsArray[@]}"
+    #     do
+
+    #         case $i in
+
+    #             amd)
+    #                 echo -e "Installing AMD graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt mesa-dri vulkan-loader mesa-vulkan-radeon mesa-vaapi mesa-vdpau || failureCheck
+    #                 echo -e "AMD graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             amd-32bit)
+    #                 echo -e "Installing 32-bit AMD graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
+    #                 xmirror -s "$installRepo" -r /mnt || failureCheck
+    #                 xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit || failureCheck
+    #                 echo -e "32-bit AMD graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             nvidia)
+    #                 echo -e "Installing NVIDIA graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt void-repo-nonfree || failureCheck
+    #                 xmirror -s "$installRepo" -r /mnt || failureCheck
+    #                 xbps-install -Sy -R $installRepo -r /mnt nvidia || failureCheck
+
+    #                 # Enabling mode setting for wayland compositors
+    #                 if [ "$bootloaderChoice" == "grub" ]; then
+    #                     sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4/GRUB_CMDLINE_DEFAULT="loglevel=4 nvidia_drm.modeset=1/g' /mnt/etc/default/grub || failureCheck 
+    #                 elif [ "$bootloaderChoice" == "efistub" ]; then
+    #                     sed -i -e 's/OPTIONS="loglevel=4/OPTIONS="loglevel=4 nvidia_drm.modeset=1/g' /mnt/etc/default/efibootmgr-kernel-hook || failureCheck
+    #                 fi
+
+    #                 echo -e "NVIDIA graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             nvidia-32bit)
+    #                 echo -e "Installing 32-bit NVIDIA graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib-nonfree void-repo-multilib || failureCheck
+    #                 xmirror -s "$installRepo" -r /mnt || failureCheck
+    #                 xbps-install -Sy -R $installRepo -r /mnt nvidia-libs-32bit || failureCheck
+    #                 echo -e "32-bit NVIDIA graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             intel)
+    #                 echo -e "Installing INTEL graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt mesa-dri vulkan-loader mesa-vulkan-intel intel-video-accel || failureCheck
+    #                 echo -e "INTEL graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             intel-32bit)
+    #                 echo -e "Installing 32-bit INTEL graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
+    #                 xmirror -s "$installRepo" -r /mnt || failureCheck
+    #                 xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit || failureCheck
+    #                 echo -e "32-bit INTEL graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             nvidia-nouveau)
+    #                 echo -e "Installing NOUVEAU graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt mesa-dri mesa-nouveau-dri || failureCheck
+    #                 echo -e "NOUVEAU graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             nvidia-nouveau-32bit)
+    #                 echo -e "Installing 32-bit NOUVEAU graphics drivers... \n"
+    #                 xbps-install -Sy -R $installRepo -r /mnt void-repo-multilib || failureCheck
+    #                 xmirror -s "$installRepo" -r /mnt || failureCheck
+    #                 xbps-install -Sy -R $installRepo -r /mnt libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit mesa-nouveau-dri-32bit || failureCheck
+    #                 echo -e "32-bit NOUVEAU graphics drivers have been installed. \n"
+    #                 ;;
+
+    #             *)
+    #                 echo -e "Continuing without graphics drivers... \n"
+    #                 ;;
+
+    #         esac
+
+    #     done
+
     if [ "$installType" == "minimal" ]; then
         chrootFunction
     elif [ "$installType" == "desktop" ]; then
 
+    # commandFailure="Graphics driver installation has failed."
         commandFailure="图形驱动程序安装失败。"
 
         for i in "${graphicsArray[@]}"
@@ -1003,6 +1362,37 @@ install() {
             esac
 
         done
+
+
+        # if [ "$networkChoice" == "NetworkManager" ]; then
+        #     commandFailure="NetworkManager installation has failed."
+        #     echo -e "Installing NetworkManager... \n"
+        #     xbps-install -Sy -R $installRepo -r /mnt NetworkManager || failureCheck
+        #     chroot /mnt /bin/bash -c "ln -s /etc/sv/NetworkManager /var/service" || failureCheck
+        #     echo -e "NetworkManager has been installed. \n"
+        # elif [ "$networkChoice" == "dhcpcd" ]; then
+        #     chroot /mnt /bin/bash -c "ln -s /etc/sv/dhcpcd /var/service" || failureCheck
+        # fi
+
+        # commandFailure="Audio server installation has failed."
+        # if [ "$audioChoice" == "pipewire" ]; then
+        #     echo -e "Installing pipewire... \n"
+        #     xbps-install -Sy -R $installRepo -r /mnt pipewire alsa-pipewire wireplumber || failureCheck
+        #     mkdir -p /mnt/etc/alsa/conf.d || failureCheck
+        #     mkdir -p /mnt/etc/pipewire/pipewire.conf.d || failureCheck
+
+        #     # This is now required to start pipewire and its session manager 'wireplumber' in an appropriate order, this should achieve a desireable result system-wide.
+        #     echo 'context.exec = [ { path = "/usr/bin/wireplumber" args = "" } ]' > /mnt/etc/pipewire/pipewire.conf.d/10-wireplumber.conf || failureCheck
+
+        #     echo -e "Pipewire has been installed. \n"
+        # elif [ "$audioChoice" == "pulseaudio" ]; then
+        #     echo -e "Installing pulseaudio... \n"
+        #     xbps-install -Sy -R $installRepo -r /mnt pulseaudio alsa-plugins-pulseaudio || failureCheck
+        #     echo -e "Pulseaudio has been installed. \n"
+        # fi
+
+        # commandFailure="GUI installation has failed."
+
 
         if [ "$networkChoice" == "NetworkManager" ]; then
             commandFailure="NetworkManager 安装失败。"
@@ -1125,6 +1515,10 @@ install() {
 
         clear
 
+        # echo -e "Desktop setup completed. \n"
+        # echo -e "The system will now chroot into the new installation for final setup... \n"
+        # sleep 1
+
         # chroot 是 Linux 和类 Unix 系统中的一个命令，它将当前或某个进程的根目录更改为一个新的目录，从而创建一个“受限的”运行环境。
         # 在这个环境中，程序无法访问新根目录以外的文件系统部分。chroot 的名称来源于“change root”（改变根目录）。
 
@@ -1136,6 +1530,33 @@ install() {
     fi
 
 }
+
+# Passing some stuff over to the new install to be used by the secondary script
+# chrootFunction() {
+
+#     commandFailure="System chroot has failed."
+#     cp /etc/resolv.conf /mnt/etc/resolv.conf || failureCheck
+    
+#     syschrootVarPairs=("bootloaderChoice $bootloaderChoice" \
+#     "suChoice $suChoice" \
+#     "timezonePrompt $timezonePrompt" \
+#     "encryptionPrompt $encryptionPrompt" \
+#     "diskInput $diskInput" \
+#     "createUser $createUser" \
+#     "desktopChoice $desktopChoice")
+
+#     for i in "${syschrootVarPairs[@]}"
+#     do
+#         set -- $i || failureCheck
+#         echo "$1='$2'" >> /mnt/tmp/installerOptions || failureCheck
+#     done
+
+#     cp -f $(pwd)/systemchroot.sh /mnt/tmp/systemchroot.sh || failureCheck
+#     chroot /mnt /bin/bash -c "/bin/bash /tmp/systemchroot.sh" || failureCheck
+
+#     postInstall
+
+# }
 
 chrootFunction() {
 
