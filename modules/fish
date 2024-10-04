@@ -1,0 +1,40 @@
+#!/bin/bash
+# 需要设置详细的 PATH。并与Fish配合
+title="Fish Shell Setup"
+description="- Installs Fish shell and related tools"
+status=off
+
+main() {
+    # 设置命令失败时的提示
+    commandFailure="Fish shell installation has failed."
+
+    # 安装 Fish Shell
+    echo -e "Installing Fish shell... \n"
+    xbps-install -Sy -R $installRepo -r /mnt fish || failureCheck
+    echo -e "Fish shell has been installed. \n"
+
+    # 设置 Fish 为默认 shell
+    echo -e "Setting Fish as the default shell... \n"
+    chroot /mnt /bin/bash -c "chsh -s /usr/bin/fish" || failureCheck
+    echo -e "Fish shell is now the default shell. \n"
+
+    # 安装 Oh My Fish (Fish 的包管理器)
+    echo -e "Installing Oh My Fish... \n"
+    chroot /mnt /bin/bash -c "curl -L https://get.oh-my.fish | fish" || failureCheck
+    echo -e "Oh My Fish has been installed. \n"
+
+    # 安装常用的 Fish 插件（可以根据需要修改插件列表）
+    echo -e "Installing useful Fish plugins... \n"
+    chroot /mnt /usr/bin/fish -c "omf install bass" || failureCheck
+    chroot /mnt /usr/bin/fish -c "omf install pj" || failureCheck
+    chroot /mnt /usr/bin/fish -c "omf install git" || failureCheck
+    echo -e "Fish plugins have been installed. \n"
+
+    # 配置 Fish 环境 (可根据需要定制)
+    echo -e "Configuring Fish shell environment... \n"
+    mkdir -p /mnt/home/$USER/.config/fish || failureCheck
+    echo "set PATH /usr/local/bin /usr/bin /bin /usr/sbin /sbin" > /mnt/home/$USER/.config/fish/config.fish || failureCheck
+    echo -e "Fish shell environment has been configured. \n"
+
+    return 0
+}

@@ -1,0 +1,33 @@
+#!/bin/bash
+# 需要设置详细的 PATH。并与Fish配合
+title="C and Rust Development Tools"
+description="- Includes essential tools for C and Rust development"
+status=off
+
+main() {
+    # 设置命令失败时的提示
+    commandFailure="Development tools installation has failed."
+
+    # 安装 C 开发工具
+    echo -e "Installing C development tools... \n"
+    xbps-install -Sy -R $installRepo -r /mnt gcc clang make gdb || failureCheck
+    echo -e "C development tools have been installed. \n"
+
+    # 安装 Rust 开发工具
+    echo -e "Installing Rust development tools... \n"
+    xbps-install -Sy -R $installRepo -r /mnt rust cargo || failureCheck
+    echo -e "Rust compiler and cargo have been installed. \n"
+
+    # 安装 rust-analyzer 和 clippy
+    echo -e "Installing additional Rust tools (rust-analyzer, clippy)... \n"
+    chroot /mnt /bin/bash -c "cargo install rust-analyzer" || failureCheck
+    chroot /mnt /bin/bash -c "rustup component add clippy" || failureCheck
+    echo -e "Rust-analyzer and Clippy have been installed. \n"
+
+    # 安装常用的调试工具
+    echo -e "Installing common debugging tools... \n"
+    xbps-install -Sy -R $installRepo -r /mnt valgrind || failureCheck
+    echo -e "Common debugging tools have been installed. \n"
+
+    return 0
+}
