@@ -147,15 +147,15 @@ diskConfiguration() {
     # fi
 
     if drawDialog --begin 2 2 --title "磁盘详情" --infobox "$partOutput" 0 0 --and-widget --title "分区工具" --yesno "您想要创建一个交换分区吗？" 0 0 ; then
-    swapPrompt="Yes"
-    partOutput=$(partitionerOutput)
-    
-    swapInput=$(drawDialog --begin 2 2 --title "磁盘详情" --infobox "$partOutput" 0 0 --and-widget --no-cancel --title "分区工具" --inputbox "您想要多大的交换分区？\n（例如：'4G')" 0 0)
+        swapPrompt="Yes"
+        partOutput=$(partitionerOutput)
+        
+        swapInput=$(drawDialog --begin 2 2 --title "磁盘详情" --infobox "$partOutput" 0 0 --and-widget --no-cancel --title "分区工具" --inputbox "您想要多大的交换分区？\n（例如：'4G')" 0 0)
 
-    sizeInput=$swapInput
-    diskCalculator
-    partOutput=$(partitionerOutput)
-fi
+        sizeInput=$swapInput
+        diskCalculator
+        partOutput=$(partitionerOutput)
+    fi
 
     # rootPrompt=$(drawDialog --begin 2 2 --title "Disk Details" --infobox "$partOutput" 0 0 --and-widget --no-cancel --title "Partitioner" --inputbox "If you would like to limit the size of your root filesystem, such as to have a separate home partition, you can enter a value such as '50G' here.\n\nOtherwise, if you would like your root partition to take up the entire drive, enter 'full' here." 0 0)
 

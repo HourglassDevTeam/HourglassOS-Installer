@@ -162,24 +162,6 @@ diskConfiguration() {
 
 installOptions() {
 
-    # if drawDialog --title "Encryption" --yesno "Should this installation be encrypted?" 0 0 ; then
-    #     encryptionPrompt="Yes"
-    #     if drawDialog --title "Wipe Disk" --yesno "Would you like to securely wipe the selected disk before setup?\n\nThis can take quite a long time depending on how many passes you choose." 0 0 ; then
-    #         wipePrompt="Yes"
-    #         passInput=$(drawDialog --title "Wipe Disk" --inputbox "How many passes would you like to do on this disk?\n\nSane values include 1-3. The more passes you choose, the longer this will take." 0 0)
-    #     else
-    #         wipePrompt="No"
-    #         passInput=0
-    #     fi
-    # else
-    #     encryptionPrompt="No"
-    # fi
-
-    # if [ -z "$basesystem" ]; then
-    #     baseChoice=$(drawDialog --no-cancel --title "Base system meta package choice" --menu "If you are unsure, choose 'base-system'" 0 0 0 "base-system" "- Traditional base system package" "base-container" "- Minimal base system package targeted at containers and chroots")
-    # else
-    #     baseChoice="Custom"
-    # fi
 
 
     if drawDialog --title "加密" --yesno "是否对本次安装进行加密？" 0 0 ; then
@@ -200,25 +182,6 @@ installOptions() {
     else
         baseChoice="Custom"
     fi
-
-
-    # More filesystems such as zfs can be added later.
-    # Until btrfs is any bit stable or performant, it will not be accepted as a feature.
-    # fsChoice=$(drawDialog --no-cancel --title "Filesystem choice" --menu "If you are unsure, choose 'ext4'" 0 0 0 "ext4" "" "xfs" "")
-
-    # suChoice=$(drawDialog --no-cancel --title "SU choice" --menu "If you are unsure, choose 'sudo'" 0 0 0 "sudo" "" "doas" "" "none" "")
-    
-    # if [ -z "$basesystem" ]; then
-    #     kernelChoice=$(drawDialog --no-cancel --title "Kernel choice" --menu "If you are unsure, choose 'linux'" 0 0 0 "linux" "- Normal Void kernel" "linux-lts" "- Older LTS kernel" "linux-mainline" "- Bleeding edge kernel")
-    # else
-    #     kernelChoice="Custom"
-    # fi
-
-    # bootloaderChoice=$(drawDialog --no-cancel --title "Bootloader choice" --menu "If you are unsure, choose 'grub'" 0 0 0 "grub" "- Traditional bootloader" "efistub" "- Boot kernel directly" "uki" "- Unified Kernel Image (experimental)" "none" "- Installs no bootloader (Advanced)")
-
-    # hostnameInput=$(drawDialog --no-cancel --title "System hostname" --inputbox "Set your system hostname." 0 0)
-
-    # createUser=$(drawDialog --title "Create User" --inputbox "What would you like your username to be?\n\nIf you do not want to set a user here, choose 'Skip'\n\nYou will be asked to set a password later." 0 0)
 
 
     fsChoice=$(drawDialog --no-cancel --title "文件系统选择" --menu "如果不确定，请选择 'ext4'" 0 0 0 "ext4" "" "xfs" "")
@@ -1080,8 +1043,10 @@ chrootFunction() {
 }
 
 drawDialog() {
+
     commandFailure="显示对话框窗口失败。"
-    dialog --stdout --cancel-label "跳过" --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" "$@" || failureCheck
+    dialog --stdout --cancel-label "跳过" --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" "$@"
+
 }
 
 checkModule() {
