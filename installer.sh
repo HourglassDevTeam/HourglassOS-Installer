@@ -1044,7 +1044,7 @@ install() {
     echo -e "系统将 chroot 进入新安装的环境进行最终设置... \n"
     sleep 1
 
-    chrootFunction
+    chrootFunction  
 
 }
 
@@ -1151,3 +1151,5 @@ postInstall() {
         exit 0
     fi
 }
+
+entry
