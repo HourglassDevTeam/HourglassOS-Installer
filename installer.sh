@@ -286,7 +286,7 @@ installOptions() {
 
 
     # Most of this timezone section is taken from the normal Void installer.
-    # areas=(Africa America Antarctica Arctic Asia Atlantic Australia Europe Indian Pacific)
+    areas=(Africa America Antarctica Arctic Asia Atlantic Australia Europe Indian Pacific)
 
     # if area=$(IFS='|'; drawDialog --title "Set Timezone" --menu "" 0 0 0 $(printf '%s||' "${areas[@]}")) ; then
     #     read -a locations -d '\n' < <(find /usr/share/zoneinfo/$area -type f -printf '%P\n' | sort) || echo "Disregard exit code"
@@ -298,7 +298,7 @@ installOptions() {
 
     # 大部分时区设置部分来自于普通的 Void 安装程序。
     # 定义了一个包含可选时区区域的数组，用于后续展示给用户选择。
-    areas=(非洲 美洲 南极洲 北极圈 亚洲 大西洋 澳洲 欧洲 印度洋 太平洋)
+    # areas=(非洲 美洲 南极洲 北极圈 亚洲 大西洋 澳洲 欧洲 印度洋 太平洋)
 
     # 使用 drawDialog 显示一个对话框，供用户选择一个大区域（例如：美洲、亚洲等）。
     # 这个 if 语句执行时，用户可以从显示的菜单中选择他们所在的区域。如果选择成功，变量 area 将保存所选的区域。
